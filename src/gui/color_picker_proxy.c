@@ -395,7 +395,7 @@ static GtkWidget *_color_picker_new(dt_iop_module_t *module,
     g_signal_connect_data(G_OBJECT(button), "button-press-event",
                           G_CALLBACK(_color_picker_callback_button_press),
                           color_picker, (GClosureNotify)g_free, 0);
-    if(w) gtk_box_pack_start(GTK_BOX(w), button, FALSE, FALSE, 0);
+    if(w) dt_gui_box_pack_start(GTK_BOX(w), button, FALSE, FALSE, 0);
 
     return button;
   }

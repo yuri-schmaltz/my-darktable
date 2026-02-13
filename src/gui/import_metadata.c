@@ -370,10 +370,10 @@ static GtkWidget *_set_up_label(GtkWidget *label,
   gtk_label_set_ellipsize(GTK_LABEL(label), PANGO_ELLIPSIZE_END);
   gtk_widget_set_halign(label, align);
   gtk_label_set_xalign(GTK_LABEL(label), 0.0);
-  GtkWidget *labelev = gtk_event_box_new();
+  GtkWidget *labelev = dt_gui_event_box_new();
   gtk_widget_set_visible(labelev, TRUE);
   gtk_widget_add_events(labelev, GDK_BUTTON_PRESS_MASK);
-  gtk_container_add(GTK_CONTAINER(labelev), label);
+  dt_gui_set_child(labelev, label);
   gtk_grid_attach(GTK_GRID(metadata->grid), labelev, 0, line, 1, 1);
   return labelev;
 }
@@ -471,7 +471,7 @@ void dt_import_metadata_init(dt_import_metadata_t *metadata)
   // default metadata
   GtkWidget *grid = gtk_grid_new();
   metadata->grid = grid;
-  gtk_box_pack_start(GTK_BOX(metadata->box), grid, FALSE, FALSE, 0);
+  dt_gui_box_pack_start(GTK_BOX(metadata->box), grid, FALSE, FALSE, 0);
   gtk_grid_set_column_spacing(GTK_GRID(grid), DT_PIXEL_APPLY_DPI(5));
   gtk_widget_show_all(grid);
   gtk_widget_set_no_show_all(grid, TRUE);

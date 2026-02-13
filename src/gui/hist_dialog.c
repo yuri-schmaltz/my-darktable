@@ -379,18 +379,26 @@ int dt_gui_hist_dialog_new(dt_history_copy_item_t *d,
 
   g_signal_connect(dialog, "response", G_CALLBACK(_gui_hist_copy_response), d);
 
+#ifdef DT_GTK4
+  gtk_widget_show(GTK_WIDGET(dialog));
+#else
   gtk_widget_show_all(GTK_WIDGET(dialog));
+#endif
 
   while(1)
   {
-    res = gtk_dialog_run(GTK_DIALOG(dialog));
+    res = dt_gui_dialog_run(GTK_DIALOG(dialog));
     if(res == GTK_RESPONSE_CANCEL
        || res == GTK_RESPONSE_DELETE_EVENT
        || res == GTK_RESPONSE_OK
        || res == GTK_RESPONSE_APPLY) break;
   }
 
+#ifdef DT_GTK4
+  gtk_window_destroy(GTK_WINDOW(dialog));
+#else
   gtk_widget_destroy(GTK_WIDGET(dialog));
+#endif
 
   g_object_unref(is_active_pb);
   g_object_unref(is_inactive_pb);

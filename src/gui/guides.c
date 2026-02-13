@@ -706,7 +706,7 @@ static void _settings_update_visibility(const _guides_settings_t *gw)
     if(w) gtk_widget_destroy(w);
 
     GtkWidget *extra = guide->widget(NULL, guide->user_data);
-    gtk_container_add(GTK_CONTAINER(gw->g_widgets), extra);
+    dt_gui_set_child(gw->g_widgets, extra);
     gtk_widget_show_all(extra);
   }
 }
@@ -824,7 +824,7 @@ GtkWidget *dt_guides_popover(dt_view_t *self,
   dt_gui_add_class(lb, "dt_section_label");
 
   // global guides section
-  gw->g_widgets = gtk_event_box_new();
+  gw->g_widgets = dt_gui_event_box_new();
   gtk_widget_set_no_show_all(gw->g_widgets, TRUE);
 
   DT_BAUHAUS_COMBOBOX_NEW_FULL(gw->g_flip, self,

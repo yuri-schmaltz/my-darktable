@@ -959,7 +959,7 @@ GtkWidget *dt_gui_style_content_dialog(char *name, const dt_imgid_t imgid)
   gtk_label_set_markup(GTK_LABEL(label), esc_name);
   gtk_label_set_max_width_chars(GTK_LABEL(label), STYLE_TOOLTIP_MAX_WIDTH);
   gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
-  gtk_box_pack_start(GTK_BOX(ht), label, FALSE, FALSE, 0);
+  dt_gui_box_pack_start(GTK_BOX(ht), label, FALSE, FALSE, 0);
   g_free(esc_name);
 
   // Style description, it can be empty
@@ -978,11 +978,14 @@ GtkWidget *dt_gui_style_content_dialog(char *name, const dt_imgid_t imgid)
     gtk_label_set_markup(GTK_LABEL(label), esc_des);
     gtk_label_set_max_width_chars(GTK_LABEL(label), STYLE_TOOLTIP_MAX_WIDTH);
     gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
-    gtk_box_pack_start(GTK_BOX(ht), label, FALSE, FALSE, 0);
+    dt_gui_box_pack_start(GTK_BOX(ht), label, FALSE, FALSE, 0);
     g_free(esc_des);
   }
 
-  gtk_box_pack_start(GTK_BOX(ht), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), TRUE, TRUE, 0);
+  if(!edit)
+  {
+    gtk_box_pack_start(GTK_BOX(ht), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), TRUE, TRUE, 0);
+  }
 
   GList *items = dt_styles_get_item_list(name, TRUE, -1, FALSE);
   GList *l = items;
@@ -1013,7 +1016,7 @@ GtkWidget *dt_gui_style_content_dialog(char *name, const dt_imgid_t imgid)
 
     label = gtk_label_new(buf);
     gtk_widget_set_halign(label, GTK_ALIGN_START);
-    gtk_box_pack_start(GTK_BOX(ht), label, FALSE, FALSE, 0);
+    dt_gui_box_pack_start(GTK_BOX(ht), label, FALSE, FALSE, 0);
     l = g_list_next(l);
   }
 
@@ -1038,7 +1041,7 @@ GtkWidget *dt_gui_style_content_dialog(char *name, const dt_imgid_t imgid)
       gtk_widget_set_size_request(da, data.psize, data.psize);
       gtk_widget_set_halign(da, GTK_ALIGN_CENTER);
       gtk_widget_set_app_paintable(da, TRUE);
-      gtk_box_pack_start(GTK_BOX(ht), da, TRUE, TRUE, 0);
+      dt_gui_box_pack_start(GTK_BOX(ht), da, TRUE, TRUE, 0);
       data.first_draw = TRUE;
       g_signal_connect(G_OBJECT(da), "draw", G_CALLBACK(_preview_draw), &data);
     }

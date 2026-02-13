@@ -190,8 +190,8 @@ void dt_splash_screen_create(const gboolean force)
   gtk_widget_set_valign(logo, GTK_ALIGN_CENTER);
 
   GtkWidget *logo_col = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
-  gtk_box_pack_start(GTK_BOX(logo_col), logo, FALSE, FALSE, 0);
-  gtk_box_pack_start(GTK_BOX(logo_col), copyright, FALSE, FALSE, 0);
+  dt_gui_box_pack_start(GTK_BOX(logo_col), logo, FALSE, FALSE, 0);
+  dt_gui_box_pack_start(GTK_BOX(logo_col), copyright, FALSE, FALSE, 0);
   gtk_widget_set_halign(logo_col, GTK_ALIGN_START);
   gtk_widget_set_valign(logo_col, GTK_ALIGN_CENTER);
 
@@ -208,7 +208,7 @@ void dt_splash_screen_create(const gboolean force)
   gtk_widget_set_halign(GTK_WIDGET(darktable.splash.remaining_box), GTK_ALIGN_START);
 
   dt_gui_box_add(content, darktable.splash.remaining_box);
-  gtk_container_add(GTK_CONTAINER(darktable.splash.start_screen), GTK_WIDGET(content));
+  dt_gui_set_child(darktable.splash.start_screen, GTK_WIDGET(content));
 
   gtk_window_set_default_size(GTK_WINDOW(darktable.splash.start_screen), 700, -1);
   gtk_widget_show_all(darktable.splash.start_screen);

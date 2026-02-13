@@ -139,7 +139,7 @@ void dt_gui_presets_update_filter(const char *name,
                                   const int filter);
 
 /** show the popup menu for the given module, with default behavior. */
-GtkMenu *dt_gui_presets_popup_menu_show_for_module(dt_iop_module_t *module);
+GtkWidget *dt_gui_presets_popup_menu_show_for_module(dt_iop_module_t *module);
 
 /** show popupmenu for favorite modules */
 void dt_gui_favorite_presets_menu_show(GtkWidget *w);

@@ -418,7 +418,9 @@ static inline GtkWidget *dt_ui_label_new(const gchar *str)
 static inline GtkWidget *dt_ui_entry_new(gint width_chars)
 {
   GtkWidget *entry = gtk_entry_new();
+#ifndef DT_GTK4
   gtk_drag_dest_unset(entry);
+#endif
   gtk_entry_set_width_chars(GTK_ENTRY(entry), width_chars);
   return entry;
 };
@@ -500,10 +502,33 @@ void dt_gui_container_remove_children(GtkContainer *container);
 // instead; it's a bit slower but safer).
 void dt_gui_container_destroy_children(GtkContainer *container);
 
+#ifdef DT_GTK4
+void dt_gui_menu_popup(GtkWidget *menu,
+                       GtkWidget *button,
+                       GdkGravity widget_anchor,
+                       GdkGravity menu_anchor);
+#else
 void dt_gui_menu_popup(GtkMenu *menu,
                        GtkWidget *button,
                        GdkGravity widget_anchor,
                        GdkGravity menu_anchor);
+#endif
+
+#ifdef DT_GTK4
+GtkWidget *dt_gui_menu_new();
+GtkWidget *dt_gui_menu_item_new(const char *label, GCallback callback, gpointer user_data);
+GtkWidget *dt_gui_separator_menu_item_new();
+void dt_gui_menu_shell_append(GtkWidget *menu, GtkWidget *item);
+#else
+#define dt_gui_menu_new() gtk_menu_new()
+#define dt_gui_menu_item_new(label, callback, user_data) ({ \
+  GtkWidget *mi = gtk_menu_item_new_with_label(label); \
+  if(callback) g_signal_connect(G_OBJECT(mi), "activate", callback, user_data); \
+  mi; \
+})
+#define dt_gui_separator_menu_item_new() gtk_separator_menu_item_new()
+#define dt_gui_menu_shell_append(menu, item) gtk_menu_shell_append(GTK_MENU_SHELL(menu), GTK_WIDGET(item))
+#endif
 
 void dt_gui_draw_rounded_rectangle(cairo_t *cr,
                                    float width,
@@ -606,7 +631,9 @@ template<typename... Widgets>
 }
 #else
 GtkWidget *(dt_gui_box_add)(const char *file, const int line, const char *function, GtkBox *box, gpointer list[]);
+GtkWidget *dt_gui_event_box_new();
 void dt_gui_set_child(GtkWidget *container, GtkWidget *child);
+void dt_gui_connect_drag_dest(GtkWidget *widget, GCallback motion_cb, GCallback drop_cb, GCallback leave_cb, gpointer user_data);
 #define dt_gui_box_add(box, ...) dt_gui_box_add(__FILE__, __LINE__, __FUNCTION__, GTK_BOX(box), (gpointer[]){ __VA_ARGS__ __VA_OPT__(,) (gpointer)-1 })
 #endif
 #define dt_gui_hbox(...) dt_gui_box_add(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0) __VA_OPT__(,) __VA_ARGS__)
@@ -688,9 +715,15 @@ static inline void dt_gui_box_pack_end(GtkBox *box, GtkWidget *widget, gboolean 
 }
 #else
 #define dt_gui_box_pack_start(box, widget, expand, fill, padding) \
-  gtk_box_pack_start(GTK_BOX(box), GTK_WIDGET(widget), expand, fill, padding)
+  dt_gui_box_pack_start(GTK_BOX(box), GTK_WIDGET(widget), expand, fill, padding)
 #define dt_gui_box_pack_end(box, widget, expand, fill, padding) \
-  gtk_box_pack_end(GTK_BOX(box), GTK_WIDGET(widget), expand, fill, padding)
+  dt_gui_box_pack_end(GTK_BOX(box), GTK_WIDGET(widget), expand, fill, padding)
+#define gtk_box_pack_start(box, widget, expand, fill, padding) \
+  dt_gui_box_pack_start(GTK_BOX(box), GTK_WIDGET(widget), expand, fill, padding)
+#define gtk_box_pack_end(box, widget, expand, fill, padding) \
+  dt_gui_box_pack_end(GTK_BOX(box), GTK_WIDGET(widget), expand, fill, padding)
+#define gtk_container_add(container, widget) \
+  dt_gui_set_child(GTK_WIDGET(container), GTK_WIDGET(widget))
 #endif
 
 static inline GtkWidget *dt_gui_scroll_wrap(GtkWidget *widget)
@@ -715,6 +748,12 @@ void dt_gui_commit_on_focus_loss(GtkCellRenderer *renderer, GtkCellEditable **ac
 
 // restore dialog size from config file
 void dt_gui_dialog_restore_size(GtkDialog *dialog, const char *conf);
+
+#ifdef DT_GTK4
+int dt_gui_dialog_run(GtkDialog *dialog);
+#else
+#define dt_gui_dialog_run(dialog) gtk_dialog_run(GTK_DIALOG(dialog))
+#endif
 
 // returns the session type at runtime
 dt_gui_session_type_t dt_gui_get_session_type(void);

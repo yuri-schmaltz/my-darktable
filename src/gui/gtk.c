@@ -625,10 +625,19 @@ gboolean dt_gui_get_scroll_unit_delta(const GdkEventScroll *event,
   return FALSE;
 }
 
+#ifdef DT_GTK4
+static void _draw_borders_snapshot(GtkWidget *widget, GtkSnapshot *snapshot, const gpointer user_data)
+{
+  GtkAllocation allocation;
+  gtk_widget_get_allocation(widget, &allocation);
+  cairo_t *crf = gtk_snapshot_append_cairo(snapshot,
+                                           &GRAPHENE_RECT_INIT(0, 0, allocation.width, allocation.height));
+#else
 static gboolean _draw_borders(GtkWidget *widget,
                               cairo_t *crf,
                               const gpointer user_data)
 {
+#endif
   // draw arrows on borders
   if(!dt_control_running())
     return TRUE;
@@ -710,24 +719,35 @@ static gboolean _draw_borders(GtkWidget *widget,
   cairo_close_path(cr);
   cairo_fill(cr);
 
-  cairo_destroy(cr);
-  cairo_set_source_surface(crf, cst, 0, 0);
-  cairo_paint(crf);
   cairo_surface_destroy(cst);
+#ifdef DT_GTK4
+  cairo_destroy(crf);
+}
+#else
   return TRUE;
 }
+#endif
 
+#ifdef DT_GTK4
+static void _draw_snapshot(GtkDrawingArea *da, cairo_t *cr, int width, int height, gpointer user_data)
+{
+  GtkWidget *widget = GTK_WIDGET(da);
+#else
 static gboolean _draw(GtkWidget *da,
                       cairo_t *cr,
                       gpointer user_data)
 {
+  GtkWidget *widget = da;
+#endif
   GtkWidget *ss = dt_ui_snapshot(darktable.gui->ui);
   darktable.gui->drawing_snapshot = da == ss;
   if(!darktable.gui->drawing_snapshot) gtk_widget_queue_draw(ss);
 
-  dt_control_expose(da, cr);
+  dt_control_expose(widget, cr);
 
+#ifndef DT_GTK4
   return TRUE;
+#endif
 }
 
 static gboolean _scrolled(GtkWidget *widget,
@@ -1821,7 +1841,7 @@ static void _init_widgets(dt_gui_gtk_t *gui)
 
   // Adding the outermost vbox
   widget = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-  gtk_container_add(GTK_CONTAINER(container), widget);
+  dt_gui_set_child(GTK_WIDGET(container), widget);
 
   /* connect to signal redraw all */
   DT_CONTROL_SIGNAL_CONNECT(DT_SIGNAL_CONTROL_REDRAW_ALL,
@@ -1908,7 +1928,7 @@ static void _init_main_table(GtkWidget *container)
   darktable.gui->ui->thumbtable = dt_thumbtable_new();
 
   /* the log message */
-  GtkWidget *eb = gtk_event_box_new();
+  GtkWidget *eb = dt_gui_event_box_new();
   darktable.gui->ui->log_msg = gtk_label_new("");
   g_signal_connect(G_OBJECT(eb), "button-press-event",
                    G_CALLBACK(_ui_log_button_press_event),
@@ -1922,7 +1942,7 @@ static void _init_main_table(GtkWidget *container)
   gtk_overlay_add_overlay(GTK_OVERLAY(ocda), eb);
 
   /* the toast message */
-  eb = gtk_event_box_new();
+  eb = dt_gui_event_box_new();
   darktable.gui->ui->toast_msg = gtk_label_new("");
   g_signal_connect(G_OBJECT(eb), "button-press-event",
                    G_CALLBACK(_ui_toast_button_press_event),
@@ -2392,7 +2412,7 @@ GtkWidget *dt_ui_main_window(const dt_ui_t *ui)
 static GtkWidget *_ui_init_panel_container_top(GtkWidget *container)
 {
   GtkWidget *w = gtk_box_new(GTK_ORIENTATION_VERTICAL, DT_UI_PANEL_MODULE_SPACING);
-  gtk_box_pack_start(GTK_BOX(container), w, FALSE, FALSE, 0);
+  dt_gui_box_pack_start(GTK_BOX(container), w, FALSE, FALSE, 0);
   return w;
 }
 
@@ -2405,17 +2425,60 @@ static gboolean _ui_init_panel_container_center_scroll_event(GtkWidget *widget,
           != dt_conf_get_bool("darkroom/ui/sidebar_scroll_default"));
 }
 
+#ifdef DT_GTK4
+static gboolean _on_drag_motion_drop(GtkDropTarget *target, double x, double y, gpointer user_data)
+{
+  GtkWidget *empty = gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(target));
+  const gboolean drop = GPOINTER_TO_INT(user_data);
+#else
 static gboolean _on_drag_motion_drop(GtkWidget *empty, GdkDragContext *dc, const gint x, const gint y, const guint time, const gboolean drop)
 {
+#endif
   GtkWidget *widget = gtk_widget_get_parent(empty);
-  if(drop) gtk_widget_set_opacity(gtk_drag_get_source_widget(dc), 1.0);
-
-  gboolean ret = TRUE;
-  gpointer last = NULL;
-  for(GList *m = gtk_container_get_children(GTK_CONTAINER(widget)); m; m = g_list_delete_link(m, m))
-    if(m->data != empty && gtk_widget_get_visible(GTK_WIDGET(m->data))) last = m->data;
+  GList *list = gtk_container_get_children(GTK_CONTAINER(widget));
+  GList *last = g_list_last(list);
   if(last)
-    g_signal_emit_by_name(last, "drag-motion", dc, drop ? -1 : x, G_MAXINT, time, &ret);
+  {
+    GtkWidget *w = GTK_WIDGET(last->data);
+    if(w != empty)
+    {
+      if(drop)
+      {
+#ifdef DT_GTK4
+        GdkContentProvider *content = gtk_drop_target_get_value(target);
+        if(content)
+        {
+          // TODO: handle the dropped widget pointer if needed
+          // In GTK4 we often use the value directly from the drop target
+        }
+#else
+        gtk_drag_get_data(empty, dc, gdk_atom_intern("GTK_WIDGET_POINTER", FALSE), time);
+#endif
+      }
+      else
+      {
+#ifdef DT_GTK4
+        return GDK_DRAG_ACTION_COPY;
+#else
+        gdk_drag_status(dc, GDK_ACTION_COPY, time);
+#endif
+      }
+    }
+  }
+  g_list_free(list);
+  return TRUE;
+}
+
+#ifdef DT_GTK4
+static void _on_drag_leave(GtkDropTarget *target, gpointer user_data)
+{
+  // GtkWidget *empty = gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(target));
+}
+#else
+static void _on_drag_leave(GtkWidget *widget, GdkDragContext *dc, const guint time, gpointer user_data)
+{
+}
+#endif
   else if(dt_view_get_current() == DT_VIEW_DARKROOM)
     gdk_drag_status(dc, 0, time); // don't allow dropping in empty panel on other side
   else if(drop)
@@ -2549,16 +2612,21 @@ static GtkWidget *_ui_init_panel_container_center(GtkWidget *container,
   container = widget;
   widget = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
   gtk_widget_set_name(widget, "plugins_vbox_left");
-  gtk_container_add(GTK_CONTAINER(container), widget);
+  dt_gui_set_child(GTK_WIDGET(container), widget);
   g_signal_connect_swapped(widget, "draw", G_CALLBACK(_side_panel_draw), NULL);
 
-  GtkWidget *empty = gtk_event_box_new();
+  GtkWidget *empty = dt_gui_event_box_new();
   gtk_widget_set_tooltip_text(empty, _("right-click to show/hide modules"));
-  gtk_box_pack_end(GTK_BOX(widget), empty, TRUE, TRUE, 0);
+  dt_gui_box_pack_end(GTK_BOX(widget), empty, TRUE, TRUE, 0);
+#ifdef DT_GTK4
+  dt_gui_connect_drag_dest(empty, (GCallback)_on_drag_motion_drop, (GCallback)_on_drag_motion_drop, (GCallback)_on_drag_leave, GINT_TO_POINTER(FALSE));
+  // Note: we might need a separate call for the 'drop' signal if user_data differs significantly
+#else
   gtk_drag_dest_set(empty, 0, NULL, 0, GDK_ACTION_COPY);
   g_signal_connect(empty, "drag-motion", G_CALLBACK(_on_drag_motion_drop), GINT_TO_POINTER(FALSE));
   g_signal_connect(empty, "drag-drop", G_CALLBACK(_on_drag_motion_drop), GINT_TO_POINTER(TRUE));
   g_signal_connect(empty, "drag-leave", G_CALLBACK(_on_drag_leave), NULL);
+#endif
   g_signal_connect(empty, "button-press-event", G_CALLBACK(_side_panel_press), NULL);
   gtk_widget_add_events(empty, GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK);
   dt_action_t *ac = dt_action_define(&darktable.control->actions_global, NULL,
@@ -2571,10 +2639,40 @@ static GtkWidget *_ui_init_panel_container_center(GtkWidget *container,
 static GtkWidget *_ui_init_panel_container_bottom(GtkWidget *container)
 {
   GtkWidget *w = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-  gtk_box_pack_start(GTK_BOX(container), w, FALSE, FALSE, 0);
+  dt_gui_box_pack_start(GTK_BOX(container), w, FALSE, FALSE, 0);
   return w;
 }
 
+#ifdef DT_GTK4
+static void _panel_handle_button_callback(GtkGestureClick *gesture, int n_press, double x, double y,
+                                          gpointer user_data)
+{
+  GtkWidget *w = gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(gesture));
+  if(n_press == 1)
+  {
+    darktable.gui->widgets.panel_handle_x = x;
+    darktable.gui->widgets.panel_handle_y = y;
+    darktable.gui->widgets.panel_handle_dragging = TRUE;
+  }
+  else if(n_press == 2)
+  {
+    darktable.gui->widgets.panel_handle_dragging = FALSE;
+    // we hide the panel
+    if(strcmp(gtk_widget_get_name(w), "panel-handle-right") == 0)
+      dt_ui_panel_show(darktable.gui->ui, DT_UI_PANEL_RIGHT, FALSE, TRUE);
+    else if(strcmp(gtk_widget_get_name(w), "panel-handle-left") == 0)
+      dt_ui_panel_show(darktable.gui->ui, DT_UI_PANEL_LEFT, FALSE, TRUE);
+    else if(strcmp(gtk_widget_get_name(w), "panel-handle-bottom") == 0)
+      dt_ui_panel_show(darktable.gui->ui, DT_UI_PANEL_BOTTOM, FALSE, TRUE);
+  }
+}
+
+static void _panel_handle_button_released_callback(GtkGestureClick *gesture, int n_press, double x, double y,
+                                                   gpointer user_data)
+{
+  darktable.gui->widgets.panel_handle_dragging = FALSE;
+}
+#else
 static gboolean _panel_handle_button_callback(GtkWidget *w,
                                               const GdkEventButton *e,
                                               gpointer user_data)
@@ -2606,6 +2704,23 @@ static gboolean _panel_handle_button_callback(GtkWidget *w,
   }
   return TRUE;
 }
+#endif
+#ifdef DT_GTK4
+static void _panel_handle_cursor_callback(GtkEventControllerMotion *controller, double x, double y,
+                                          gpointer user_data)
+{
+  GtkWidget *w = gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(controller));
+  if(strcmp(gtk_widget_get_name(w), "panel-handle-bottom") == 0)
+    dt_control_change_cursor(GDK_SB_V_DOUBLE_ARROW);
+  else
+    dt_control_change_cursor(GDK_SB_H_DOUBLE_ARROW);
+}
+static void _panel_handle_cursor_leave_callback(GtkEventControllerMotion *controller,
+                                                gpointer user_data)
+{
+  dt_control_change_cursor(GDK_LEFT_PTR);
+}
+#else
 static gboolean _panel_handle_cursor_callback(GtkWidget *w,
                                               const GdkEventCrossing *e,
                                               gpointer user_data)
@@ -2620,6 +2735,45 @@ static gboolean _panel_handle_cursor_callback(GtkWidget *w,
                              : GDK_LEFT_PTR);
   return TRUE;
 }
+#endif
+#ifdef DT_GTK4
+static void _panel_handle_motion_callback(GtkEventControllerMotion *controller, double x, double y,
+                                          gpointer user_data)
+{
+  GtkWidget *w = gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(controller));
+  GtkWidget *widget = (GtkWidget *)user_data;
+  if(darktable.gui->widgets.panel_handle_dragging)
+  {
+    gint sx = gtk_widget_get_allocated_width(widget);
+    const gint sy = gtk_widget_get_allocated_height(widget);
+
+    if(strcmp(gtk_widget_get_name(w), "panel-handle-right") == 0)
+    {
+      sx = CLAMP((sx + darktable.gui->widgets.panel_handle_x - x),
+                 dt_conf_get_int("min_panel_width"),
+                 dt_conf_get_int("max_panel_width"));
+      dt_ui_panel_set_size(darktable.gui->ui, DT_UI_PANEL_RIGHT, sx);
+    }
+    else if(strcmp(gtk_widget_get_name(w), "panel-handle-left") == 0)
+    {
+      sx = CLAMP((sx - darktable.gui->widgets.panel_handle_x + x),
+                 dt_conf_get_int("min_panel_width"),
+                 dt_conf_get_int("max_panel_width"));
+      dt_ui_panel_set_size(darktable.gui->ui, DT_UI_PANEL_LEFT, sx);
+    }
+    else if(strcmp(gtk_widget_get_name(w), "panel-handle-bottom") == 0)
+    {
+      sx = CLAMP((sy + darktable.gui->widgets.panel_handle_y - y),
+                 dt_conf_get_int("min_panel_height"),
+                 dt_conf_get_int("max_panel_height"));
+      dt_ui_panel_set_size(darktable.gui->ui, DT_UI_PANEL_BOTTOM, sx);
+      gtk_widget_set_size_request(widget, -1, sx);
+    }
+
+    gtk_widget_queue_resize(widget);
+  }
+}
+#else
 static gboolean _panel_handle_motion_callback(GtkWidget *w,
                                               const GdkEventMotion *e,
                                               const gpointer user_data)
@@ -2656,9 +2810,9 @@ static gboolean _panel_handle_motion_callback(GtkWidget *w,
     gtk_widget_queue_resize(widget);
     return TRUE;
   }
-
   return FALSE;
 }
+#endif
 
 static void _ui_init_panel_left(dt_ui_t *ui,
                                 GtkWidget *container)
@@ -2671,19 +2825,23 @@ static void _ui_init_panel_left(dt_ui_t *ui,
   gtk_widget_set_name(widget, "left");
 
   GtkWidget *over = gtk_overlay_new();
-  gtk_container_add(GTK_CONTAINER(over), widget);
+  dt_gui_set_child(over, widget);
   // we add a transparent overlay over the modules margins to resize the panel
   GtkWidget *handle = gtk_drawing_area_new();
   gtk_widget_set_halign(handle, GTK_ALIGN_END);
   gtk_widget_set_valign(handle, GTK_ALIGN_FILL);
   gtk_widget_set_size_request(handle, DT_RESIZE_HANDLE_SIZE, -1);
   gtk_overlay_add_overlay(GTK_OVERLAY(over), handle);
+  gtk_widget_set_name(GTK_WIDGET(handle), "panel-handle-left");
+
+#ifdef DT_GTK4
+  dt_gui_connect_click(handle, _panel_handle_button_callback, _panel_handle_button_released_callback, handle);
+  dt_gui_connect_motion(handle, _panel_handle_motion_callback, _panel_handle_cursor_callback, _panel_handle_cursor_leave_callback, widget);
+#else
   gtk_widget_set_events(handle,
                         GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK
                         | GDK_ENTER_NOTIFY_MASK
                         | GDK_LEAVE_NOTIFY_MASK | GDK_POINTER_MOTION_MASK);
-  gtk_widget_set_name(GTK_WIDGET(handle), "panel-handle-left");
-
   g_signal_connect(G_OBJECT(handle), "button-press-event",
                    G_CALLBACK(_panel_handle_button_callback), handle);
   g_signal_connect(G_OBJECT(handle), "button-release-event",
@@ -2694,6 +2852,7 @@ static void _ui_init_panel_left(dt_ui_t *ui,
                    G_CALLBACK(_panel_handle_cursor_callback), handle);
   g_signal_connect(G_OBJECT(handle), "enter-notify-event",
                    G_CALLBACK(_panel_handle_cursor_callback), handle);
+#endif
   gtk_widget_show(handle);
 
   gtk_grid_attach(GTK_GRID(container), over, 1, 1, 1, 1);
@@ -2722,18 +2881,23 @@ static void _ui_init_panel_right(dt_ui_t *ui,
   gtk_widget_set_name(widget, "right");
 
   GtkWidget *over = gtk_overlay_new();
-  gtk_container_add(GTK_CONTAINER(over), widget);
+  dt_gui_set_child(over, widget);
   // we add a transparent overlay over the modules margins to resize the panel
   GtkWidget *handle = gtk_drawing_area_new();
   gtk_widget_set_halign(handle, GTK_ALIGN_START);
   gtk_widget_set_valign(handle, GTK_ALIGN_FILL);
   gtk_widget_set_size_request(handle, DT_RESIZE_HANDLE_SIZE, -1);
   gtk_overlay_add_overlay(GTK_OVERLAY(over), handle);
+  gtk_widget_set_name(GTK_WIDGET(handle), "panel-handle-right");
+
+#ifdef DT_GTK4
+  dt_gui_connect_click(handle, _panel_handle_button_callback, _panel_handle_button_released_callback, handle);
+  dt_gui_connect_motion(handle, _panel_handle_motion_callback, _panel_handle_cursor_callback, _panel_handle_cursor_leave_callback, widget);
+#else
   gtk_widget_set_events(handle,
                         GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK
                         | GDK_ENTER_NOTIFY_MASK
                         | GDK_LEAVE_NOTIFY_MASK | GDK_POINTER_MOTION_MASK);
-  gtk_widget_set_name(GTK_WIDGET(handle), "panel-handle-right");
   g_signal_connect(G_OBJECT(handle), "button-press-event",
                    G_CALLBACK(_panel_handle_button_callback), handle);
   g_signal_connect(G_OBJECT(handle), "button-release-event",
@@ -2744,6 +2908,7 @@ static void _ui_init_panel_right(dt_ui_t *ui,
                    G_CALLBACK(_panel_handle_cursor_callback), handle);
   g_signal_connect(G_OBJECT(handle), "enter-notify-event",
                    G_CALLBACK(_panel_handle_cursor_callback), handle);
+#endif
   gtk_widget_show(handle);
 
   gtk_grid_attach(GTK_GRID(container), over, 3, 1, 1, 1);
@@ -2775,21 +2940,21 @@ static void _ui_init_panel_top(dt_ui_t *ui,
   /* add container for top left */
   ui->containers[DT_UI_CONTAINER_PANEL_TOP_LEFT] =
     gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-  gtk_box_pack_start(GTK_BOX(widget), ui->containers[DT_UI_CONTAINER_PANEL_TOP_LEFT],
+  dt_gui_box_pack_start(GTK_BOX(widget), ui->containers[DT_UI_CONTAINER_PANEL_TOP_LEFT],
                      FALSE, FALSE,
                      DT_UI_PANEL_MODULE_SPACING);
 
   /* add container for top center */
   ui->containers[DT_UI_CONTAINER_PANEL_TOP_CENTER] =
     gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-  gtk_box_pack_start(GTK_BOX(widget), ui->containers[DT_UI_CONTAINER_PANEL_TOP_CENTER],
+  dt_gui_box_pack_start(GTK_BOX(widget), ui->containers[DT_UI_CONTAINER_PANEL_TOP_CENTER],
                      TRUE, TRUE,
                      DT_UI_PANEL_MODULE_SPACING);
 
   /* add container for top right */
   ui->containers[DT_UI_CONTAINER_PANEL_TOP_RIGHT] =
     gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-  gtk_box_pack_end(GTK_BOX(widget), ui->containers[DT_UI_CONTAINER_PANEL_TOP_RIGHT],
+  dt_gui_box_pack_end(GTK_BOX(widget), ui->containers[DT_UI_CONTAINER_PANEL_TOP_RIGHT],
                    FALSE, FALSE,
                    DT_UI_PANEL_MODULE_SPACING);
 }
@@ -2807,7 +2972,7 @@ static void _ui_init_panel_bottom(dt_ui_t *ui,
   _ui_init_bottom_panel_size(widget);
 
   GtkWidget *over = gtk_overlay_new();
-  gtk_container_add(GTK_CONTAINER(over), widget);
+  dt_gui_set_child(over, widget);
   // we add a transparent overlay over the modules margins to resize the panel
   GtkWidget *handle = gtk_drawing_area_new();
   gtk_widget_set_halign(handle, GTK_ALIGN_FILL);
@@ -2821,6 +2986,10 @@ static void _ui_init_panel_bottom(dt_ui_t *ui,
                         | GDK_LEAVE_NOTIFY_MASK | GDK_POINTER_MOTION_MASK);
   gtk_widget_set_name(GTK_WIDGET(handle), "panel-handle-bottom");
 
+#ifdef DT_GTK4
+  dt_gui_connect_click(handle, _panel_handle_button_callback, _panel_handle_button_released_callback, handle);
+  dt_gui_connect_motion(handle, _panel_handle_motion_callback, _panel_handle_cursor_callback, _panel_handle_cursor_leave_callback, widget);
+#else
   g_signal_connect(G_OBJECT(handle), "button-press-event",
                    G_CALLBACK(_panel_handle_button_callback), handle);
   g_signal_connect(G_OBJECT(handle), "button-release-event",
@@ -2831,6 +3000,7 @@ static void _ui_init_panel_bottom(dt_ui_t *ui,
                    G_CALLBACK(_panel_handle_cursor_callback), handle);
   g_signal_connect(G_OBJECT(handle), "enter-notify-event",
                    G_CALLBACK(_panel_handle_cursor_callback), handle);
+#endif
   gtk_widget_show(handle);
 
   gtk_grid_attach(GTK_GRID(container), over, 1, 2, 3, 1);
@@ -2838,7 +3008,7 @@ static void _ui_init_panel_bottom(dt_ui_t *ui,
   /* add the container */
   ui->containers[DT_UI_CONTAINER_PANEL_BOTTOM] =
     gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-  gtk_box_pack_start(GTK_BOX(widget),
+  dt_gui_box_pack_start(GTK_BOX(widget),
                      ui->containers[DT_UI_CONTAINER_PANEL_BOTTOM], TRUE, TRUE,
                      DT_UI_PANEL_MODULE_SPACING);
   gtk_widget_show(widget);
@@ -2860,21 +3030,21 @@ static void _ui_init_panel_center_top(dt_ui_t *ui,
   /* add container for center top left */
   ui->containers[DT_UI_CONTAINER_PANEL_CENTER_TOP_LEFT] =
     gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-  gtk_box_pack_start(GTK_BOX(widget),
+  dt_gui_box_pack_start(GTK_BOX(widget),
                      ui->containers[DT_UI_CONTAINER_PANEL_CENTER_TOP_LEFT], TRUE, TRUE,
                      DT_UI_PANEL_MODULE_SPACING);
 
   /* add container for center top center */
   ui->containers[DT_UI_CONTAINER_PANEL_CENTER_TOP_CENTER] =
     gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-  gtk_box_pack_start(GTK_BOX(widget),
+  dt_gui_box_pack_start(GTK_BOX(widget),
                      ui->containers[DT_UI_CONTAINER_PANEL_CENTER_TOP_CENTER], TRUE, FALSE,
                      DT_UI_PANEL_MODULE_SPACING);
 
   /* add container for center top right */
   ui->containers[DT_UI_CONTAINER_PANEL_CENTER_TOP_RIGHT] =
     gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-  gtk_box_pack_end(GTK_BOX(widget),
+  dt_gui_box_pack_end(GTK_BOX(widget),
                    ui->containers[DT_UI_CONTAINER_PANEL_CENTER_TOP_RIGHT], FALSE, FALSE,
                    DT_UI_PANEL_MODULE_SPACING);
 }
@@ -3074,10 +3244,10 @@ gboolean dt_gui_show_standalone_yes_no_dialog(const char *title,
   }
 
   GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, padding);
-  gtk_container_add(GTK_CONTAINER(window), vbox);
+  dt_gui_set_child(window, vbox);
 
   GtkWidget *mhbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, padding);
-  gtk_box_pack_start(GTK_BOX(vbox), mhbox, TRUE, TRUE, padding);
+  dt_gui_box_pack_start(GTK_BOX(vbox), mhbox, TRUE, TRUE, padding);
 
   if(padding)
   {
@@ -3169,7 +3339,7 @@ char *dt_gui_show_standalone_string_dialog(const char *title,
   gtk_widget_set_margin_end(vbox, 10);
   gtk_widget_set_margin_top(vbox, 7);
   gtk_widget_set_margin_bottom(vbox, 5);
-  gtk_container_add(GTK_CONTAINER(window), vbox);
+  dt_gui_set_child(window, vbox);
 
   GtkWidget *label = gtk_label_new(NULL);
   gtk_label_set_markup(GTK_LABEL(label), markup);
@@ -3691,9 +3861,32 @@ static void _notebook_size_callback(GtkNotebook *notebook,
 // GTK_STATE_FLAG_PRELIGHT does not seem to get set on the label on
 // hover so state-flags-changed cannot update
 // darktable.control->element for shortcut mapping
+#ifdef DT_GTK4
+static void _notebook_motion_callback(GtkEventControllerMotion *controller, double x, double y,
+                                      gpointer user_data)
+{
+  GtkNotebook *notebook = GTK_NOTEBOOK(user_data);
+  const int n = gtk_notebook_get_n_pages(notebook);
+  for(int i = 0; i < n; i++)
+  {
+    GtkWidget *label = gtk_notebook_get_tab_label(notebook, gtk_notebook_get_nth_page(notebook, i));
+    if(!label) continue;
+    
+    double lx, ly;
+    if(gtk_widget_translate_coordinates(GTK_WIDGET(notebook), label, x, y, &lx, &ly))
+    {
+      if(lx >= 0 && lx < gtk_widget_get_width(label))
+      {
+        darktable.control->element = i;
+        break;
+      }
+    }
+  }
+}
+#else
 static gboolean _notebook_motion_notify_callback(GtkNotebook *notebook,
-                                                 const GdkEventMotion *event,
-                                                 gpointer user_data)
+                                                  const GdkEventMotion *event,
+                                                  gpointer user_data)
 {
   if(gtk_get_event_widget((GdkEvent*)event) != GTK_WIDGET(notebook)) return FALSE;
 
@@ -3712,9 +3905,9 @@ static gboolean _notebook_motion_notify_callback(GtkNotebook *notebook,
       break;
     }
   }
-
   return FALSE;
 }
+#endif
 
 static float _action_process_tabs(const gpointer target,
                                   const dt_action_element_t element,
@@ -3812,10 +4005,34 @@ GtkNotebook *dt_ui_notebook_new(dt_action_def_t *def)
     def->process = _action_process_tabs;
   }
 
+#ifdef DT_GTK4
+  dt_gui_connect_scroll(_current_notebook, G_CALLBACK(_notebook_scroll_callback), _current_notebook);
+  dt_gui_connect_click(GTK_WIDGET(_current_notebook), G_CALLBACK(_notebook_button_press_callback), NULL, _current_notebook);
+  dt_gui_connect_motion(GTK_WIDGET(_current_notebook), G_CALLBACK(_notebook_motion_callback), NULL, NULL, _current_notebook);
+#else
+  gtk_widget_add_events(GTK_WIDGET(_current_notebook), GDK_SCROLL_MASK | GDK_SMOOTH_SCROLL_MASK | GDK_BUTTON_PRESS_MASK | GDK_POINTER_MOTION_MASK);
+  g_signal_connect(G_OBJECT(_current_notebook), "scroll-event", G_CALLBACK(_notebook_scroll_callback), NULL);
+  g_signal_connect(G_OBJECT(_current_notebook), "button-press-event", G_CALLBACK(_notebook_button_press_callback), NULL);
+  g_signal_connect(G_OBJECT(_current_notebook), "motion-notify-event", G_CALLBACK(_notebook_motion_notify_callback), NULL);
+#ifndef DT_GTK4
   gtk_drag_dest_unset(GTK_WIDGET(_current_notebook));
+#endif
+#endif
   return _current_notebook;
 }
 
+#ifdef DT_GTK4
+static void _notebook_scroll_callback(GtkEventControllerScroll *controller, double dx, double dy,
+                                      gpointer user_data)
+{
+  GtkWidget *widget = gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(controller));
+  const GdkModifierType state = gtk_event_controller_get_current_event_state(GTK_EVENT_CONTROLLER(controller));
+  _action_process_tabs(widget, DT_ACTION_EFFECT_DEFAULT_KEY,
+                       dy < 0
+                       ? DT_ACTION_EFFECT_NEXT
+                       : DT_ACTION_EFFECT_PREVIOUS, (int)dy);
+}
+#else
 static gboolean _notebook_scroll_callback(GtkNotebook *notebook,
                                           GdkEventScroll *event,
                                           gpointer user_data)
@@ -3831,7 +4048,17 @@ static gboolean _notebook_scroll_callback(GtkNotebook *notebook,
 
   return TRUE;
 }
+#endif
 
+#ifdef DT_GTK4
+static void _notebook_button_press_callback(GtkGestureClick *gesture, int n_press, double x, double y,
+                                            gpointer user_data)
+{
+  GtkNotebook *notebook = GTK_NOTEBOOK(user_data);
+  if(n_press == 2)
+    _reset_all_bauhaus(notebook, gtk_notebook_get_nth_page(notebook, gtk_notebook_get_current_page(notebook)));
+}
+#else
 static gboolean _notebook_button_press_callback(GtkNotebook *notebook,
                                                 const GdkEventButton *event,
                                                 gpointer user_data)
@@ -3841,6 +4068,7 @@ static gboolean _notebook_button_press_callback(GtkNotebook *notebook,
 
   return FALSE;
 }
+#endif
 
 GtkWidget *dt_ui_notebook_page(GtkNotebook *notebook,
                                const char *text,
@@ -3859,8 +4087,12 @@ GtkWidget *dt_ui_notebook_page(GtkNotebook *notebook,
   gtk_widget_set_has_tooltip(GTK_WIDGET(notebook), FALSE);
 
   const gint page_num = gtk_notebook_append_page(notebook, page, label);
+#ifndef DT_GTK4
   gtk_container_child_set(GTK_CONTAINER(notebook), page,
                           "tab-expand", TRUE, "tab-fill", TRUE, NULL);
+#else
+  gtk_widget_set_hexpand(label, TRUE);
+#endif
   if(page_num == 1 &&
      !g_signal_handler_find(G_OBJECT(notebook),
                             G_SIGNAL_MATCH_FUNC, 0, 0, NULL, _notebook_size_callback, NULL))
@@ -3959,10 +4191,21 @@ static gint _get_container_row_heigth(GtkWidget *w)
   return height;
 }
 
+#ifdef DT_GTK4
+static void _resize_wrap_snapshot(GtkWidget *w,
+                                  GtkSnapshot *snapshot,
+                                  const char *config_str)
+{
+  GtkAllocation allocation;
+  gtk_widget_get_allocation(w, &allocation);
+  cairo_t *cr = gtk_snapshot_append_cairo(snapshot,
+                                          &GRAPHENE_RECT_INIT(0, 0, allocation.width, allocation.height));
+#else
 static gboolean _resize_wrap_draw(GtkWidget *w,
                                   void *cr,
                                   const char *config_str)
 {
+#endif
   GtkWidget *sw = gtk_widget_get_parent(w);
   if(GTK_IS_VIEWPORT(sw)) sw = gtk_widget_get_parent(sw);
 
@@ -4012,8 +4255,13 @@ static gboolean _resize_wrap_draw(GtkWidget *w,
     gtk_adjustment_set_value(adj, value);
   }
 
+#ifdef DT_GTK4
+  cairo_destroy(cr);
+}
+#else
   return FALSE;
 }
+#endif
 
 static gboolean _resize_wrap_scroll(GtkScrolledWindow *sw,
                                     GdkEventScroll *event,
@@ -4084,10 +4332,23 @@ static gboolean _scroll_wrap_height(GtkWidget *w,
 static gboolean _resize_wrap_dragging = FALSE;
 static GtkWidget *_resize_wrap_hovered = NULL;
 
+#ifdef DT_GTK4
+static void _resize_wrap_draw_handle_snapshot(GtkWidget *w,
+                                              GtkSnapshot *snapshot,
+                                              gpointer user_data)
+{
+  if(w != _resize_wrap_hovered)
+    return;
+  GtkAllocation allocation;
+  gtk_widget_get_allocation(w, &allocation);
+  cairo_t *cr = gtk_snapshot_append_cairo(snapshot,
+                                          &GRAPHENE_RECT_INIT(0, 0, allocation.width, allocation.height));
+#else
 static gboolean _resize_wrap_draw_handle(GtkWidget *w,
                                          void *cr,
                                          gpointer user_data)
 {
+#endif
   if(w != _resize_wrap_hovered)
     return FALSE;
 
@@ -4102,8 +4363,13 @@ static gboolean _resize_wrap_draw_handle(GtkWidget *w,
   cairo_set_line_width(cr, DT_RESIZE_HANDLE_SIZE / 2);
   cairo_stroke(cr);
 
+#ifdef DT_GTK4
+  cairo_destroy(cr);
+}
+#else
   return FALSE;
 }
+#endif
 
 static gboolean _resize_wrap_motion(GtkWidget *widget,
                                     const GdkEventMotion *event,
@@ -4204,15 +4470,26 @@ GtkWidget *dt_ui_resize_wrap(GtkWidget *w,
                                    GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
     gtk_scrolled_window_set_min_content_height
       (GTK_SCROLLED_WINDOW(sw), - DT_PIXEL_APPLY_DPI(min_size));
+#ifdef DT_GTK4
+    dt_gui_connect_scroll(sw, G_CALLBACK(_resize_wrap_scroll), (gpointer)config_str);
+    // Draw handle is tricky on GtkWidget in GTK4 without subclassing.
+    // We might need a separate DrawingArea for the handle.
+#else
     g_signal_connect(G_OBJECT(sw), "scroll-event",
                      G_CALLBACK(_resize_wrap_scroll), config_str);
     g_signal_connect(G_OBJECT(w), "draw",
                      G_CALLBACK(_resize_wrap_draw), config_str);
+#endif
     gtk_widget_set_margin_bottom(sw, DT_RESIZE_HANDLE_SIZE);
-    w = gtk_event_box_new();
-    gtk_container_add(GTK_CONTAINER(w), sw);
+    w = dt_gui_event_box_new();
+    dt_gui_set_child(w, sw);
   }
 
+#ifdef DT_GTK4
+  dt_gui_connect_motion(w, G_CALLBACK(_resize_wrap_motion), (gpointer)config_str, NULL, NULL);
+  dt_gui_connect_click(w, G_CALLBACK(_resize_wrap_button), G_CALLBACK(_resize_wrap_button), (gpointer)config_str);
+  dt_gui_connect_motion(w, G_CALLBACK(_resize_wrap_enter_leave), NULL, G_CALLBACK(_resize_wrap_enter_leave), (gpointer)config_str);
+#else
   gtk_widget_add_events(w, GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK
                          | GDK_ENTER_NOTIFY_MASK | GDK_LEAVE_NOTIFY_MASK
                          | GDK_POINTER_MOTION_MASK | darktable.gui->scroll_mask);
@@ -4228,6 +4505,7 @@ GtkWidget *dt_ui_resize_wrap(GtkWidget *w,
                    G_CALLBACK(_resize_wrap_enter_leave), config_str);
   g_signal_connect_after(G_OBJECT(w), "draw",
                          G_CALLBACK(_resize_wrap_draw_handle), NULL);
+#endif
 
   return w;
 }
@@ -4294,6 +4572,52 @@ void dt_gui_container_destroy_children(GtkContainer *container)
   gtk_container_foreach(container, _delete_child, NULL);
 }
 
+#ifdef DT_GTK4
+void dt_gui_menu_popup(GtkWidget *menu,
+                       GtkWidget *button,
+                       const GdkGravity widget_anchor,
+                       const GdkGravity menu_anchor)
+{
+  if(GTK_IS_POPOVER(menu))
+  {
+    if(button) gtk_popover_set_relative_to(GTK_POPOVER(menu), button);
+    gtk_popover_popup(GTK_POPOVER(menu));
+  }
+}
+
+GtkWidget *dt_gui_menu_new()
+{
+  // For GTK4, a "menu" is often a Popover with a Box when built dynamically
+  GtkWidget *popover = gtk_popover_new();
+  GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+  gtk_popover_set_child(GTK_POPOVER(popover), box);
+  return popover;
+}
+
+GtkWidget *dt_gui_menu_item_new(const char *label, GCallback callback, gpointer user_data)
+{
+  GtkWidget *button = gtk_button_new_with_label(label);
+  gtk_button_set_has_frame(GTK_BUTTON(button), FALSE);
+  gtk_widget_set_halign(button, GTK_ALIGN_START);
+  if(callback) g_signal_connect(G_OBJECT(button), "clicked", callback, user_data);
+  return button;
+}
+
+GtkWidget *dt_gui_separator_menu_item_new()
+{
+  return gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
+}
+
+void dt_gui_menu_shell_append(GtkWidget *menu, GtkWidget *item)
+{
+  GtkWidget *box = gtk_popover_get_child(GTK_POPOVER(menu));
+  if(GTK_IS_BOX(box))
+  {
+    gtk_box_append(GTK_BOX(box), item);
+  }
+}
+
+#else
 void dt_gui_menu_popup(GtkMenu *menu,
                        GtkWidget *button,
                        const GdkGravity widget_anchor,
@@ -4324,6 +4648,7 @@ void dt_gui_menu_popup(GtkMenu *menu,
   }
   gdk_event_free(event);
 }
+#endif
 
 // draw rounded rectangle
 void dt_gui_draw_rounded_rectangle(cairo_t *cr,
@@ -4363,6 +4688,34 @@ gboolean dt_gui_search_start(GtkWidget *widget,
 
   return FALSE;
 }
+
+#ifdef DT_GTK4
+static void _dialog_response_cb(GtkDialog *dialog, int response_id, gpointer data)
+{
+  int *res = (int *)data;
+  *res = response_id;
+}
+
+int dt_gui_dialog_run(GtkDialog *dialog)
+{
+  GMainLoop *loop = g_main_loop_new(NULL, FALSE);
+  int response_id = GTK_RESPONSE_NONE;
+
+  gulong handler_id = g_signal_connect(dialog, "response", G_CALLBACK(_dialog_response_cb), &response_id);
+  gulong quit_id = g_signal_connect_swapped(dialog, "response", G_CALLBACK(g_main_loop_quit), loop);
+
+  gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
+  gtk_widget_show(GTK_WIDGET(dialog));
+
+  g_main_loop_run(loop);
+
+  g_signal_handler_disconnect(dialog, handler_id);
+  g_signal_handler_disconnect(dialog, quit_id);
+  g_main_loop_unref(loop);
+
+  return response_id;
+}
+#endif
 
 void dt_gui_search_stop(GtkSearchEntry *entry,
                         GtkWidget *widget)
@@ -4444,7 +4797,7 @@ void dt_gui_new_collapsible_section(dt_gui_collapsible_section_t *cs,
 
   // collapsible section header
   GtkWidget *destdisp_head = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, DT_BAUHAUS_SPACE);
-  GtkWidget *header_evb = gtk_event_box_new();
+  GtkWidget *header_evb = dt_gui_event_box_new();
   GtkWidget *destdisp = dt_ui_section_label_new(label);
   cs->label = destdisp;
   dt_gui_add_class(destdisp_head, "dt_section_expander");
@@ -4521,6 +4874,15 @@ GtkGestureSingle *(dt_gui_connect_click)(GtkWidget *widget,
   }
 
   return (GtkGestureSingle *)gesture;
+}
+
+GtkWidget *dt_gui_event_box_new()
+{
+#ifdef DT_GTK4
+  return gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+#else
+  return gtk_event_box_new();
+#endif
 }
 
 GtkEventController *(dt_gui_connect_motion)(GtkWidget *widget,
@@ -4679,6 +5041,22 @@ void dt_gui_simulate_button_event(GtkWidget *widget,
   }
 }
 
+void dt_gui_connect_drag_dest(GtkWidget *widget, GCallback motion_cb, GCallback drop_cb, GCallback leave_cb, gpointer user_data)
+{
+#ifdef DT_GTK4
+  GtkDropTarget *target = gtk_drop_target_new(G_TYPE_INVALID, GDK_ACTION_COPY);
+  if(motion_cb) g_signal_connect(target, "motion", motion_cb, user_data);
+  if(drop_cb) g_signal_connect(target, "drop", drop_cb, user_data);
+  if(leave_cb) g_signal_connect(target, "leave", leave_cb, user_data);
+  gtk_widget_add_controller(widget, GTK_EVENT_CONTROLLER(target));
+#else
+  gtk_drag_dest_set(widget, 0, NULL, 0, GDK_ACTION_COPY);
+  if(motion_cb) g_signal_connect(widget, "drag-motion", motion_cb, user_data);
+  if(drop_cb) g_signal_connect(widget, "drag-drop", drop_cb, user_data);
+  if(leave_cb) g_signal_connect(widget, "drag-leave", leave_cb, user_data);
+#endif
+}
+
 void dt_gui_set_child(GtkWidget *container, GtkWidget *child)
 {
 #ifdef DT_GTK4
@@ -4701,7 +5079,10 @@ void dt_gui_set_child(GtkWidget *container, GtkWidget *child)
   else
     dt_print(DT_DEBUG_ALWAYS, "dt_gui_set_child: unknown container type %s", G_OBJECT_TYPE_NAME(container));
 #else
-  gtk_container_add(GTK_CONTAINER(container), child);
+  if(GTK_IS_CONTAINER(container))
+    gtk_container_add(GTK_CONTAINER(container), child);
+  else
+    dt_print(DT_DEBUG_ALWAYS, "dt_gui_set_child: unknown container type %s", G_OBJECT_TYPE_NAME(container));
 #endif
 }
 
@@ -4718,7 +5099,7 @@ GtkWidget *(dt_gui_box_add)(const char *file, const int line, const char *functi
 #ifdef DT_GTK4
       gtk_box_append(GTK_BOX(box), GTK_WIDGET(*list));
 #else
-      gtk_container_add(GTK_CONTAINER(box), GTK_WIDGET(*list));
+      dt_gui_set_child(GTK_WIDGET(box), GTK_WIDGET(*list));
 #endif
   }
 
