@@ -1,0 +1,32 @@
+/*
+    AEGIS UI Design System Tokens
+    Standardized scale for darktable.
+*/
+
+/* Spacing Scale (based on 4px grid) */
+@define-color aegis-space-2xsmall #000004; /* 4px (logical use) */
+@define-color aegis-space-xsmall #000008;  /* 8px */
+@define-color aegis-space-small #00000c;   /* 12px */
+@define-color aegis-space-medium #000010;  /* 16px */
+@define-color aegis-space-large #000018;   /* 24px */
+@define-color aegis-space-xlarge #000020;  /* 32px */
+
+/* Note: GTK CSS @define-color is used here to store "values" since 
+   GTK 3.x CSS doesn't support native CSS variables easily without 
+   C-level provider injection, but darktable's theme system uses 
+   @define-color for constants. We will use them as references. */
+
+/* Real tokens for use in selectors */
+@define-color aegis-radius-small 4px;
+@define-color aegis-radius-medium 8px;
+
+/* Color Delta-E compliance (Standardizing on Darktable Elegant Darker) */
+@define-color aegis-primary @grey_35;
+@define-color aegis-bg @grey_15;
+@define-color aegis-fg @grey_75;
+@define-color aegis-accent #4080ff; /* Blue accent for primary actions */
+
+/* States */
+@define-color aegis-hover-bg @grey_50;
+@define-color aegis-hover-fg @grey_15;
+@define-color aegis-disabled alpha(@fg_color, 0.4);

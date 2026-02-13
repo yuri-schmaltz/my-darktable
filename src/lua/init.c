@@ -21,6 +21,7 @@
 #include "control/jobs.h"
 #include "lua/cairo.h"
 #include "lua/call.h"
+#include "lua/ai.h"
 #include "lua/configuration.h"
 #include "lua/database.h"
 #include "lua/events.h"
@@ -142,7 +143,7 @@ static lua_CFunction init_funcs[]
         dt_lua_init_luastorages,   dt_lua_init_tags,        dt_lua_init_film,     dt_lua_init_call,
         dt_lua_init_view,          dt_lua_init_events,      dt_lua_init_init,     dt_lua_init_widget,
         dt_lua_init_lualib,        dt_lua_init_gettext,     dt_lua_init_guides,   dt_lua_init_cairo,
-        dt_lua_init_password,      dt_lua_init_util,        NULL };
+        dt_lua_init_password,      dt_lua_init_util,        dt_lua_init_ai,       NULL };
 
 
 void dt_lua_init(lua_State *L, const char *lua_command)

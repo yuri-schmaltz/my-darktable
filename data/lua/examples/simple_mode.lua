@@ -9,6 +9,8 @@
 ]]
 
 local dt = require "darktable"
+local ollama = require "ollama_client"
+local mcp_bridge = require "mcp_bridge"
 
 -- Check if we are in API version 9.0.0+ (just a safeguard)
 if dt.configuration.version < "4.0.0" then
@@ -19,7 +21,7 @@ end
 -- Define the widget layout
 local simple_mode_widget = dt.new_widget("box") {
   orientation = "vertical",
-  padding = 5,
+  padding = 8, -- AEGIS: Standardized 8px padding
 }
 
 --
@@ -113,18 +115,45 @@ local slider_vibrance = dt.new_widget("slider") {
   end
 }
 
--- AI Auto Enhance (Future Integration)
+-- AI Auto Enhance (Natively Integrated)
 local btn_auto_enhance = dt.new_widget("button") {
-  label = "✨ AI Auto Enhance",
+  label = "AI Auto Enhance", -- AEGIS: No emojis or HTML in labels
   clicked_callback = function(self)
-    dt.print("Simple Mode: Triggering AI Auto Enhance...")
-    dt.print("TODO: Call dt_ai_run_inference() via FFI or C module")
+    if not dt.ai.is_available() then
+      dt.print("Simple Mode: AI Core is not available (ONNX Runtime missing)")
+      return
+    end
+    
+    dt.print("Simple Mode: Triggering Native AI Auto Enhance...")
+    dt.ai.run_inference("models/auto_enhance.onnx")
+  end
+}
+
+-- AI Image Descriptor
+local btn_describe = dt.new_widget("button") {
+  label = "AI Descriptor (Ollama)",
+  clicked_callback = function(self)
+    local img = dt.gui.action_images[1]
+    if not img then
+      dt.print("Simple Mode: No image selected")
+      return
+    end
+    
+    -- Export a small JPG for analysis
+    local tmp_jpg = "/tmp/dt_analysis.jpg"
+    dt.print("Simple Mode: Preparing preview...")
+    
+    -- Use darktable-cli if possible or export via API (limited in Lua)
+    -- For this prototype, we assume the physical path is accessible to Ollama
+    local result = ollama.describe(img.path)
+    dt.print("AI Description: " .. result)
+    dt.gui.libs.notable.add_note("AI Description", result)
   end
 }
 
 -- Heuristic Assistant (Phase 3 Preview)
 local btn_analyze = dt.new_widget("button") {
-  label = "🔍 Analyze Scene",
+  label = "Analyze Scene",
   clicked_callback = function(self)
     dt.print("Simple Mode: Analyzing histogram...")
     local random_advice = {
@@ -139,7 +168,7 @@ local btn_analyze = dt.new_widget("button") {
 
 -- Reset Button
 local btn_reset = dt.new_widget("button") {
-  label = "↺ Reset Adjustments",
+  label = "Reset Adjustments",
   clicked_callback = function(self)
     dt.print("Simple Mode: Resetting all sliders...")
     slider_exposure.value = 0.0
@@ -165,8 +194,8 @@ local btn_reset = dt.new_widget("button") {
 -- Assemble the Panel
 --
 
-simple_mode_widget:add(dt.new_widget("label") { label = "<h2>Simple Mode</h2>" })
-simple_mode_widget:add(dt.new_widget("label") { label = "<i>Essential adjustments only</i>" })
+simple_mode_widget:add(dt.new_widget("label") { label = "Simple Mode" })
+simple_mode_widget:add(dt.new_widget("label") { label = "Essential adjustments only" })
 simple_mode_widget:add(dt.new_widget("separator") { orientation = "horizontal" })
 
 simple_mode_widget:add(slider_exposure)
@@ -177,6 +206,7 @@ simple_mode_widget:add(slider_clarity)
 simple_mode_widget:add(slider_dehaze)
 simple_mode_widget:add(slider_vibrance)
 simple_mode_widget:add(dt.new_widget("separator") { orientation = "horizontal" })
+simple_mode_widget:add(btn_describe)
 simple_mode_widget:add(btn_analyze)
 simple_mode_widget:add(btn_auto_enhance)
 simple_mode_widget:add(btn_reset)
