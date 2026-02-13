@@ -1,3 +1,4 @@
+add_subdirectory(common)
 add_subdirectory(iop)
 
 add_cmocka_test(test_sample

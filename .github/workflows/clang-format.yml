@@ -1,0 +1,58 @@
+name: clang-format check
+
+on:
+  pull_request:
+    branches: [ master ]
+    paths:
+      - "src/**"
+
+permissions:
+  contents: read
+
+jobs:
+  format-check:
+    name: Check code formatting
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # need full history for diff
+
+      - name: Install clang-format
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format
+
+      - name: Check formatting on changed files
+        run: |
+          # Get list of changed C/C++ files in this PR
+          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR ${{ github.event.pull_request.base.sha }} -- \
+            '*.c' '*.h' '*.cc' '*.cpp' '*.hh' '*.hpp' | head -100)
+
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No C/C++ files changed, skipping format check."
+            exit 0
+          fi
+
+          echo "Checking formatting of changed files:"
+          echo "$CHANGED_FILES"
+
+          # Run clang-format and check for differences
+          FORMAT_DIFF=""
+          for file in $CHANGED_FILES; do
+            if [ -f "$file" ]; then
+              DIFF=$(clang-format --style=file "$file" | diff -u "$file" - || true)
+              if [ -n "$DIFF" ]; then
+                FORMAT_DIFF="${FORMAT_DIFF}\n${DIFF}"
+              fi
+            fi
+          done
+
+          if [ -n "$FORMAT_DIFF" ]; then
+            echo "::error::Code formatting issues found. Please run clang-format on your changes."
+            echo -e "Formatting differences:\n$FORMAT_DIFF"
+            exit 1
+          else
+            echo "All changed files are properly formatted."
+          fi
