@@ -563,6 +563,15 @@ GtkEventController *(dt_gui_connect_motion)(GtkWidget *widget,
                                             GCallback enter,
                                             GCallback leave,
                                             gpointer data);
+
+GtkEventController *(dt_gui_connect_scroll)(GtkWidget *widget,
+                                            GCallback scroll,
+                                            gpointer data);
+
+GtkEventController *(dt_gui_connect_key)(GtkWidget *widget,
+                                         GCallback pressed,
+                                         GCallback released,
+                                         gpointer data);
 #define dt_gui_connect_motion(widget, motion, enter, leave, data) ( \
   ASSERT_FUNC_TYPE(motion, void(*)(GtkEventControllerMotion *, double, double, __typeof__(data))), \
   ASSERT_FUNC_TYPE(enter, void(*)(GtkEventControllerMotion *, double, double, __typeof__(data))), \
@@ -587,15 +596,17 @@ void dt_gui_process_events();
 extern "C++"
 {
 template<typename... Widgets>
-inline GtkWidget *dt_gui_box_add(gpointer box, Widgets*... w)
-{
-  // fold expression: expands to gtk_container_add(box, a), gtk_container_add(box, b), ...
+#ifdef DT_GTK4
+  (gtk_box_append(GTK_BOX(box), GTK_WIDGET(w)), ...);
+#else
   (gtk_container_add(GTK_CONTAINER(box), GTK_WIDGET(w)), ...);
+#endif
   return GTK_WIDGET(box);
 }
 }
 #else
 GtkWidget *(dt_gui_box_add)(const char *file, const int line, const char *function, GtkBox *box, gpointer list[]);
+void dt_gui_set_child(GtkWidget *container, GtkWidget *child);
 #define dt_gui_box_add(box, ...) dt_gui_box_add(__FILE__, __LINE__, __FUNCTION__, GTK_BOX(box), (gpointer[]){ __VA_ARGS__ __VA_OPT__(,) (gpointer)-1 })
 #endif
 #define dt_gui_hbox(...) dt_gui_box_add(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0) __VA_OPT__(,) __VA_ARGS__)
@@ -615,12 +626,82 @@ static inline GtkWidget *(dt_gui_align_right)(GtkWidget *widget)
   gtk_widget_set_halign(widget, GTK_ALIGN_END);
   return dt_gui_expand(widget);
 }
+static inline void dt_gui_add_class(GtkWidget *widget, const char *class_name)
+{
+  GtkStyleContext *context = gtk_widget_get_style_context(widget);
+  gtk_style_context_add_class(context, class_name);
+}
+
+static inline void dt_gui_remove_class(GtkWidget *widget, const char *class_name)
+{
+  GtkStyleContext *context = gtk_widget_get_style_context(widget);
+  gtk_style_context_remove_class(context, class_name);
+}
+
+#ifdef DT_GTK4
+static inline void dt_gui_box_pack_start(GtkBox *box, GtkWidget *widget, gboolean expand, gboolean fill, guint padding)
+{
+  if(expand)
+  {
+    if(gtk_orientable_get_orientation(GTK_ORIENTABLE(box)) == GTK_ORIENTATION_HORIZONTAL)
+      gtk_widget_set_hexpand(widget, TRUE);
+    else
+      gtk_widget_set_vexpand(widget, TRUE);
+  }
+  if(fill)
+  {
+    gtk_widget_set_halign(widget, GTK_ALIGN_FILL);
+    gtk_widget_set_valign(widget, GTK_ALIGN_FILL);
+  }
+  if(padding > 0)
+  {
+    gtk_widget_set_margin_start(widget, padding);
+    gtk_widget_set_margin_end(widget, padding);
+    gtk_widget_set_margin_top(widget, padding);
+    gtk_widget_set_margin_bottom(widget, padding);
+  }
+  gtk_box_append(box, widget);
+}
+
+static inline void dt_gui_box_pack_end(GtkBox *box, GtkWidget *widget, gboolean expand, gboolean fill, guint padding)
+{
+  if(expand)
+  {
+    if(gtk_orientable_get_orientation(GTK_ORIENTABLE(box)) == GTK_ORIENTATION_HORIZONTAL)
+      gtk_widget_set_hexpand(widget, TRUE);
+    else
+      gtk_widget_set_vexpand(widget, TRUE);
+  }
+  if(fill)
+  {
+    gtk_widget_set_halign(widget, GTK_ALIGN_FILL);
+    gtk_widget_set_valign(widget, GTK_ALIGN_FILL);
+  }
+  if(padding > 0)
+  {
+    gtk_widget_set_margin_start(widget, padding);
+    gtk_widget_set_margin_end(widget, padding);
+    gtk_widget_set_margin_top(widget, padding);
+    gtk_widget_set_margin_bottom(widget, padding);
+  }
+  gtk_box_prepend(box, widget);
+}
+#else
+#define dt_gui_box_pack_start(box, widget, expand, fill, padding) \
+  gtk_box_pack_start(GTK_BOX(box), GTK_WIDGET(widget), expand, fill, padding)
+#define dt_gui_box_pack_end(box, widget, expand, fill, padding) \
+  gtk_box_pack_end(GTK_BOX(box), GTK_WIDGET(widget), expand, fill, padding)
+#endif
 
 static inline GtkWidget *dt_gui_scroll_wrap(GtkWidget *widget)
 {
   GtkWidget *scrolled_window = gtk_scrolled_window_new(NULL, NULL);
   gtk_widget_set_vexpand(scrolled_window, TRUE);
+#ifdef DT_GTK4
+  gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled_window), widget);
+#else
   gtk_container_add(GTK_CONTAINER(scrolled_window), widget);
+#endif
   return scrolled_window;
 }
 

@@ -1832,7 +1832,7 @@ static void _init_widgets(dt_gui_gtk_t *gui)
   // Initializing the top border
   gui->widgets.top_border = _init_outer_border(-1, DT_PIXEL_APPLY_DPI(10),
                                                DT_UI_BORDER_TOP);
-  gtk_box_pack_start(GTK_BOX(container), gui->widgets.top_border, FALSE, TRUE, 0);
+  dt_gui_box_pack_start(GTK_BOX(container), gui->widgets.top_border, FALSE, TRUE, 0);
 
   // Initializing the main table
   _init_main_table(container);
@@ -1840,7 +1840,7 @@ static void _init_widgets(dt_gui_gtk_t *gui)
   // Initializing the bottom border
   gui->widgets.bottom_border = _init_outer_border(-1, DT_PIXEL_APPLY_DPI(10),
                                                   DT_UI_BORDER_BOTTOM);
-  gtk_box_pack_start(GTK_BOX(container), gui->widgets.bottom_border, FALSE, TRUE, 0);
+  dt_gui_box_pack_start(GTK_BOX(container), gui->widgets.bottom_border, FALSE, TRUE, 0);
 
   dt_gui_apply_theme();
 }
@@ -1882,7 +1882,7 @@ static void _init_main_table(GtkWidget *container)
   _ui_init_panel_center_top(darktable.gui->ui, widget);
 
   GtkWidget *centergrid = gtk_grid_new();
-  gtk_box_pack_start(GTK_BOX(widget), centergrid, TRUE, TRUE, 0);
+  dt_gui_box_pack_start(GTK_BOX(widget), centergrid, TRUE, TRUE, 0);
 
   /* setup center drawing area */
   GtkWidget *ocda = gtk_overlay_new();
@@ -1895,8 +1895,8 @@ static void _init_main_table(GtkWidget *container)
   darktable.gui->ui->snapshot = gtk_drawing_area_new();
   gtk_widget_set_no_show_all(darktable.gui->ui->snapshot, TRUE);
   GtkWidget *sidebyside = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-  gtk_box_pack_start(GTK_BOX(sidebyside), cda, TRUE, TRUE, 0);
-  gtk_box_pack_start(GTK_BOX(sidebyside), darktable.gui->ui->snapshot, TRUE, TRUE, 0);
+  dt_gui_box_pack_start(GTK_BOX(sidebyside), cda, TRUE, TRUE, 0);
+  dt_gui_box_pack_start(GTK_BOX(sidebyside), darktable.gui->ui->snapshot, TRUE, TRUE, 0);
   gtk_box_set_homogeneous(GTK_BOX(sidebyside), TRUE);
   gtk_overlay_add_overlay(GTK_OVERLAY(ocda), sidebyside);
 
@@ -1915,7 +1915,7 @@ static void _init_main_table(GtkWidget *container)
                    darktable.gui->ui->log_msg);
   gtk_label_set_ellipsize(GTK_LABEL(darktable.gui->ui->log_msg), PANGO_ELLIPSIZE_MIDDLE);
   dt_gui_add_class(darktable.gui->ui->log_msg, "dt_messages");
-  gtk_container_add(GTK_CONTAINER(eb), darktable.gui->ui->log_msg);
+  dt_gui_set_child(eb, darktable.gui->ui->log_msg);
   gtk_widget_set_no_show_all(darktable.gui->ui->log_msg, TRUE);
   gtk_widget_set_valign(eb, GTK_ALIGN_END);
   gtk_widget_set_halign(eb, GTK_ALIGN_CENTER);
@@ -1938,7 +1938,7 @@ static void _init_main_table(GtkWidget *container)
   pango_attr_list_unref(attrlist);
 
   dt_gui_add_class(darktable.gui->ui->toast_msg, "dt_messages");
-  gtk_container_add(GTK_CONTAINER(eb), darktable.gui->ui->toast_msg);
+  dt_gui_set_child(eb, darktable.gui->ui->toast_msg);
   gtk_widget_set_no_show_all(darktable.gui->ui->toast_msg, TRUE);
   gtk_widget_set_valign(eb, GTK_ALIGN_START);
   gtk_widget_set_halign(eb, GTK_ALIGN_CENTER);
@@ -2017,12 +2017,12 @@ void dt_ui_container_add_widget(const dt_ui_t *ui,
     case DT_UI_CONTAINER_PANEL_CENTER_TOP_CENTER:
     case DT_UI_CONTAINER_PANEL_CENTER_BOTTOM_CENTER:
     case DT_UI_CONTAINER_PANEL_BOTTOM:
-      gtk_box_pack_start(GTK_BOX(ui->containers[c]), w, TRUE, TRUE, 0);
+      dt_gui_box_pack_start(GTK_BOX(ui->containers[c]), w, TRUE, TRUE, 0);
       break;
 
     default:
     {
-      gtk_box_pack_start(GTK_BOX(ui->containers[c]), w, FALSE, FALSE, 0);
+      dt_gui_box_pack_start(GTK_BOX(ui->containers[c]), w, FALSE, FALSE, 0);
     }
     break;
   }
@@ -4448,7 +4448,7 @@ void dt_gui_new_collapsible_section(dt_gui_collapsible_section_t *cs,
   GtkWidget *destdisp = dt_ui_section_label_new(label);
   cs->label = destdisp;
   dt_gui_add_class(destdisp_head, "dt_section_expander");
-  gtk_container_add(GTK_CONTAINER(header_evb), destdisp);
+  dt_gui_set_child(header_evb, destdisp);
 
   cs->toggle = dtgtk_togglebutton_new(dtgtk_cairo_paint_solid_arrow,
                                       (expanded
@@ -4505,10 +4505,13 @@ GtkGestureSingle *(dt_gui_connect_click)(GtkWidget *widget,
                                          GCallback released,
                                          gpointer data)
 {
+#ifdef DT_GTK4
+  GtkGesture *gesture = gtk_gesture_click_new();
+  gtk_widget_add_controller(widget, GTK_EVENT_CONTROLLER(gesture));
+#else
   GtkGesture *gesture = gtk_gesture_multi_press_new(widget);
   g_object_weak_ref(G_OBJECT (widget), (GWeakNotify) g_object_unref, gesture);
-  // GTK4 GtkGesture *gesture = gtk_gesture_click_new();
-  //      gtk_widget_add_controller(widget, GTK_EVENT_CONTROLLER(gesture));
+#endif
 
   if(pressed) g_signal_connect(gesture, "pressed", G_CALLBACK(pressed), data);
   if(released)
@@ -4526,16 +4529,60 @@ GtkEventController *(dt_gui_connect_motion)(GtkWidget *widget,
                                             GCallback leave,
                                             gpointer data)
 {
+#ifdef DT_GTK4
+  GtkEventController *controller = gtk_event_controller_motion_new();
+  gtk_widget_add_controller(widget, controller);
+#else
   GtkEventController *controller = gtk_event_controller_motion_new(widget);
-  gtk_event_controller_set_propagation_phase(controller, GTK_PHASE_TARGET);
   g_object_weak_ref(G_OBJECT (widget), (GWeakNotify) g_object_unref, controller);
-  // GTK4 gtk_widget_add_controller(widget, GTK_EVENT_CONTROLLER(controller));
+#endif
+  gtk_event_controller_set_propagation_phase(controller, GTK_PHASE_TARGET);
 
+#ifndef DT_GTK4
   gtk_widget_add_events(widget, GDK_ENTER_NOTIFY_MASK | GDK_LEAVE_NOTIFY_MASK); // still needed for now by _main_do_event_keymap
+#endif
 
   if(motion) g_signal_connect(controller, "motion", G_CALLBACK(motion), data);
   if(enter) g_signal_connect(controller, "enter", G_CALLBACK(enter), data);
   if(leave) g_signal_connect(controller, "leave", G_CALLBACK(leave), data);
+
+  return controller;
+}
+
+GtkEventController *(dt_gui_connect_scroll)(GtkWidget *widget,
+                                            GCallback scroll,
+                                            gpointer data)
+{
+#ifdef DT_GTK4
+  GtkEventController *controller = gtk_event_controller_scroll_new(GTK_EVENT_CONTROLLER_SCROLL_BOTH_AXES);
+  gtk_widget_add_controller(widget, controller);
+#else
+  GtkEventController *controller = gtk_event_controller_scroll_new(widget, GTK_EVENT_CONTROLLER_SCROLL_BOTH_AXES);
+  g_object_weak_ref(G_OBJECT (widget), (GWeakNotify) g_object_unref, controller);
+#endif
+  gtk_event_controller_set_propagation_phase(controller, GTK_PHASE_TARGET);
+
+  if(scroll) g_signal_connect(controller, "scroll", G_CALLBACK(scroll), data);
+
+  return controller;
+}
+
+GtkEventController *(dt_gui_connect_key)(GtkWidget *widget,
+                                         GCallback pressed,
+                                         GCallback released,
+                                         gpointer data)
+{
+#ifdef DT_GTK4
+  GtkEventController *controller = gtk_event_controller_key_new();
+  gtk_widget_add_controller(widget, controller);
+#else
+  GtkEventController *controller = gtk_event_controller_key_new(widget);
+  g_object_weak_ref(G_OBJECT (widget), (GWeakNotify) g_object_unref, controller);
+#endif
+  gtk_event_controller_set_propagation_phase(controller, GTK_PHASE_TARGET);
+
+  if(pressed) g_signal_connect(controller, "key-pressed", G_CALLBACK(pressed), data);
+  if(released) g_signal_connect(controller, "key-released", G_CALLBACK(released), data);
 
   return controller;
 }
@@ -4632,6 +4679,32 @@ void dt_gui_simulate_button_event(GtkWidget *widget,
   }
 }
 
+void dt_gui_set_child(GtkWidget *container, GtkWidget *child)
+{
+#ifdef DT_GTK4
+  if(GTK_IS_WINDOW(container))
+    gtk_window_set_child(GTK_WINDOW(container), child);
+  else if(GTK_IS_SCROLLED_WINDOW(container))
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(container), child);
+  else if(GTK_IS_BUTTON(container))
+    gtk_button_set_child(GTK_BUTTON(container), child);
+  else if(GTK_IS_FRAME(container))
+    gtk_frame_set_child(GTK_FRAME(container), child);
+  else if(GTK_IS_ASPECT_FRAME(container))
+    gtk_aspect_frame_set_child(GTK_ASPECT_FRAME(container), child);
+  else if(GTK_IS_OVERLAY(container))
+    gtk_overlay_set_child(GTK_OVERLAY(container), child);
+  else if(GTK_IS_POPOVER(container))
+    gtk_popover_set_child(GTK_POPOVER(container), child);
+  else if(GTK_IS_VIEWPORT(container))
+    gtk_viewport_set_child(GTK_VIEWPORT(container), child);
+  else
+    dt_print(DT_DEBUG_ALWAYS, "dt_gui_set_child: unknown container type %s", G_OBJECT_TYPE_NAME(container));
+#else
+  gtk_container_add(GTK_CONTAINER(container), child);
+#endif
+}
+
 GtkWidget *(dt_gui_box_add)(const char *file, const int line, const char *function, GtkBox *box, gpointer list[])
 {
   if(!GTK_IS_BOX(box)) dt_print(DT_DEBUG_ALWAYS, "%s:%d %s: trying to add widgets to non-box container using dt_gui_box_add", file, line, function);
@@ -4642,7 +4715,11 @@ GtkWidget *(dt_gui_box_add)(const char *file, const int line, const char *functi
     else if(gtk_widget_get_parent(*list))
       dt_print(DT_DEBUG_ALWAYS, "%s:%d %s: trying to add widget that already has a parent to box (#%d)", file, line, function, i);
     else
-      gtk_container_add(GTK_CONTAINER(box), GTK_WIDGET(*list)); // GTK4 gtk_box_append
+#ifdef DT_GTK4
+      gtk_box_append(GTK_BOX(box), GTK_WIDGET(*list));
+#else
+      gtk_container_add(GTK_CONTAINER(box), GTK_WIDGET(*list));
+#endif
   }
 
   return GTK_WIDGET(box);

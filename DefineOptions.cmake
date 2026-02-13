@@ -38,6 +38,7 @@ option(USE_ICU "Use ICU - International Components for Unicode." ON)
 option(FORCE_COLORED_OUTPUT "Always produce ANSI-colored output (GNU/Clang only)." OFF)
 option(USE_SDL2 "Enable SDL2 support" ON)
 option(USE_ONNX "Enable ONNX Runtime support for AI features" OFF)
+option(USE_GTK4 "Build with GTK4 support (EXPERIMENTAL)" OFF)
 
 if (USE_OPENCL)
     option(TESTBUILD_OPENCL_PROGRAMS "Test-compile OpenCL programs (needs LLVM and Clang 7+)" ON)

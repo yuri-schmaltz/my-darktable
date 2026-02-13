@@ -158,7 +158,16 @@ static const double INNER_PADDING = 4.0;
 // fwd declare
 static void _popup_reject(void);
 static void _popup_hide(void);
+#ifdef DT_GTK4
+static void _widget_snapshot(GtkWidget *widget, GtkSnapshot *snapshot);
+#else
+static gboolean _widget_draw(GtkWidget *widget, cairo_t *cr);
+#endif
 static gboolean _popup_draw(GtkWidget *widget, cairo_t *cr, gpointer user_data);
+#ifdef DT_GTK4
+static void _widget_measure(GtkWidget *widget, GtkOrientation orientation, int for_size,
+                            int *minimum, int *natural, int *minimum_baseline, int *natural_baseline);
+#endif
 static gboolean _popup_key_press(GtkWidget *widget, GdkEventKey *event, gpointer user_data);
 static void _combobox_set(dt_bauhaus_widget_t *w,
                           const int pos,
@@ -2609,9 +2618,18 @@ static gboolean _popup_draw(GtkWidget *widget,
   return TRUE;
 }
 
+#ifdef DT_GTK4
+static void _widget_snapshot(GtkWidget *widget, GtkSnapshot *snapshot)
+{
+  GtkAllocation allocation;
+  gtk_widget_get_allocation(widget, &allocation);
+  cairo_t *crf = gtk_snapshot_append_cairo(snapshot,
+                                           &GRAPHENE_RECT_INIT(0, 0, allocation.width, allocation.height));
+#else
 static gboolean _widget_draw(GtkWidget *widget,
                              cairo_t *crf)
 {
+#endif
   GtkAllocation allocation;
   gtk_widget_get_allocation(widget, &allocation);
   dt_bauhaus_widget_t *w = DT_BAUHAUS_WIDGET(widget);
@@ -2765,12 +2783,13 @@ static gboolean _widget_draw(GtkWidget *widget,
   cairo_surface_destroy(cst);
   gtk_render_frame(context, crf, w->margin.left, w->margin.top, w2, h2);
 
-  gdk_rgba_free(text_color);
-  gdk_rgba_free(fg_color);
-  gdk_rgba_free(bg_color);
-
+#ifdef DT_GTK4
+  cairo_destroy(crf);
+}
+#else
   return TRUE;
 }
+#endif
 
 static gint _natural_width(GtkWidget *widget,
                            const gboolean popup)
@@ -2851,6 +2870,20 @@ static void _widget_get_preferred_width(GtkWidget *widget,
   *natural_width = _natural_width(widget, FALSE)
                    + w->margin.left + w->margin.right + w->padding.left + w->padding.right;
 }
+#ifdef DT_GTK4
+static void _widget_measure(GtkWidget *widget, GtkOrientation orientation, int for_size,
+                            int *minimum, int *natural, int *minimum_baseline, int *natural_baseline)
+{
+  if(orientation == GTK_ORIENTATION_HORIZONTAL)
+  {
+    *minimum = *natural = _natural_width(widget, FALSE);
+  }
+  else
+  {
+    *minimum = *natural = _natural_height(widget);
+  }
+}
+#endif
 
 static void _widget_get_preferred_height(GtkWidget *widget,
                                          gint *minimum_height,
@@ -3682,13 +3715,14 @@ static void dt_bh_class_init(DtBauhausWidgetClass *class)
                      g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 
   GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(class);
+#ifdef DT_GTK4
+  widget_class->snapshot = _widget_snapshot;
+  widget_class->measure = _widget_measure;
+#else
   widget_class->draw = _widget_draw;
-  // widget_class->snapshot = _widget_snapshot;
-  widget_class->scroll_event = _widget_scroll;
-  widget_class->key_press_event = _widget_key_press;
   widget_class->get_preferred_width = _widget_get_preferred_width;
   widget_class->get_preferred_height = _widget_get_preferred_height;
-  // widget_class->measure = _widget_measure;
+#endif
   G_OBJECT_CLASS(class)->finalize = _widget_finalize;
 
   // for histogram -> exposure proxy

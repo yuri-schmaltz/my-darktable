@@ -448,6 +448,14 @@ void dt_iop_init_pipe(dt_iop_module_t *module,
   piece->blendop_data = calloc(1, sizeof(dt_develop_blend_params_t));
 }
 
+#ifdef DT_GTK4
+static void _header_enter_notify_callback(GtkEventControllerMotion *controller,
+                                          double x, double y,
+                                          gpointer user_data)
+{
+  darktable.control->element = GPOINTER_TO_INT(user_data);
+}
+#else
 static gboolean _header_enter_notify_callback(GtkWidget *eventbox,
                                               GdkEventCrossing *event,
                                               gpointer user_data)
@@ -455,7 +463,17 @@ static gboolean _header_enter_notify_callback(GtkWidget *eventbox,
   darktable.control->element = GPOINTER_TO_INT(user_data);
   return FALSE;
 }
+#endif
 
+#ifdef DT_GTK4
+static void _header_motion_notify_show_callback(GtkEventControllerMotion *controller,
+                                                double x, double y,
+                                                dt_iop_module_t *module)
+{
+  darktable.control->element = DT_ACTION_ELEMENT_SHOW;
+  dt_iop_show_hide_header_buttons(module, NULL, TRUE, FALSE);
+}
+#else
 static gboolean _header_motion_notify_show_callback(GtkWidget *eventbox,
                                                     GdkEventCrossing *event,
                                                     dt_iop_module_t *module)
@@ -463,13 +481,22 @@ static gboolean _header_motion_notify_show_callback(GtkWidget *eventbox,
   darktable.control->element = DT_ACTION_ELEMENT_SHOW;
   return dt_iop_show_hide_header_buttons(module, event, TRUE, FALSE);
 }
+#endif
 
+#ifdef DT_GTK4
+static void _header_motion_notify_hide_callback(GtkEventControllerMotion *controller,
+                                                dt_iop_module_t *module)
+{
+  dt_iop_show_hide_header_buttons(module, NULL, FALSE, FALSE);
+}
+#else
 static gboolean _header_motion_notify_hide_callback(GtkWidget *eventbox,
                                                     GdkEventCrossing *event,
                                                     dt_iop_module_t *module)
 {
   return dt_iop_show_hide_header_buttons(module, event, FALSE, FALSE);
 }
+#endif
 
 static void _header_menu_deactivate_callback(GtkMenuShell *menushell,
                                              dt_iop_module_t *module)
@@ -2541,25 +2568,53 @@ void dt_iop_gui_update_expanded(dt_iop_module_t *module)
   dtgtk_expander_set_expanded(DTGTK_EXPANDER(module->expander), expanded);
 }
 
+#ifdef DT_GTK4
+static void _iop_plugin_body_button_press(GtkGestureClick *gesture, int n_press, double x, double y,
+                                          gpointer user_data)
+{
+  dt_iop_module_t *module = (dt_iop_module_t *)user_data;
+  const int button = gtk_gesture_single_get_current_button(GTK_GESTURE_SINGLE(gesture));
+#else
 static gboolean _iop_plugin_body_button_press(GtkWidget *w,
                                               GdkEventButton *e,
                                               gpointer user_data)
 {
   dt_iop_module_t *module = (dt_iop_module_t *)user_data;
-  if(e->button == GDK_BUTTON_PRIMARY)
+  const int button = e->button;
+#endif
+
+  if(button == GDK_BUTTON_PRIMARY)
   {
     dt_iop_request_focus(module);
+#ifdef DT_GTK4
+    return;
+#else
     return TRUE;
+#endif
   }
-  else if(e->button == GDK_BUTTON_SECONDARY)
+  else if(button == GDK_BUTTON_SECONDARY)
   {
     _presets_popup_callback(NULL, NULL, module);
 
+#ifdef DT_GTK4
+    return;
+#else
     return TRUE;
+#endif
   }
+#ifndef DT_GTK4
   return FALSE;
+#endif
 }
 
+#ifdef DT_GTK4
+static void _iop_plugin_header_button_release(GtkGestureClick *gesture, int n_press, double x, double y,
+                                              gpointer user_data)
+{
+  dt_iop_module_t *module = (dt_iop_module_t *)user_data;
+  const int button = gtk_gesture_single_get_current_button(GTK_GESTURE_SINGLE(gesture));
+  const GdkModifierType state = gtk_event_controller_get_current_event_state(GTK_EVENT_CONTROLLER(gesture));
+#else
 static gboolean _iop_plugin_header_button_release(GtkWidget *w,
                                                   GdkEventButton *e,
                                                   gpointer user_data)
@@ -2568,21 +2623,28 @@ static gboolean _iop_plugin_header_button_release(GtkWidget *w,
   if(GTK_IS_BUTTON(gtk_get_event_widget((GdkEvent*)e))) return FALSE;
 
   dt_iop_module_t *module = (dt_iop_module_t *)user_data;
+  const int button = e->button;
+  const GdkModifierType state = e->state;
+#endif
 
-  if(e->button == GDK_BUTTON_PRIMARY)
+  if(button == GDK_BUTTON_PRIMARY)
   {
-    if(dt_modifier_is(e->state, GDK_SHIFT_MASK | GDK_CONTROL_MASK))
+    if(dt_modifier_is(state, GDK_SHIFT_MASK | GDK_CONTROL_MASK))
       ; // do nothing (for easier dragging)
-    else if(dt_modifier_is(e->state, GDK_CONTROL_MASK))
+    else if(dt_modifier_is(state, GDK_CONTROL_MASK))
     {
       dt_iop_gui_rename_module(module);
+#ifdef DT_GTK4
+      return;
+#else
       return TRUE;
+#endif
     }
     else
     {
       const gboolean collapse_others =
         !dt_conf_get_bool("darkroom/ui/single_module")
-        != (!dt_modifier_is(e->state, GDK_SHIFT_MASK));
+        != (!dt_modifier_is(state, GDK_SHIFT_MASK));
 
       dt_iop_gui_set_expanded(module, !module->expanded, collapse_others);
 
@@ -2592,16 +2654,26 @@ static gboolean _iop_plugin_header_button_release(GtkWidget *w,
       //used to take focus away from module search text input box when module selected
       gtk_widget_grab_focus(dt_ui_center(darktable.gui->ui));
 
+#ifdef DT_GTK4
+      return;
+#else
       return TRUE;
+#endif
     }
   }
-  else if(e->button == GDK_BUTTON_SECONDARY)
+  else if(button == GDK_BUTTON_SECONDARY)
   {
     _presets_popup_callback(NULL, NULL, module);
 
+#ifdef DT_GTK4
+    return;
+#else
     return TRUE;
+#endif
   }
+#ifndef DT_GTK4
   return FALSE;
+#endif
 }
 
 static void _header_size_callback(GtkWidget *widget,
@@ -2701,7 +2773,11 @@ static void _header_size_callback(GtkWidget *widget,
 }
 
 gboolean dt_iop_show_hide_header_buttons(dt_iop_module_t *module,
+#ifdef DT_GTK4
+                                         void *event,
+#else
                                          GdkEventCrossing *event,
+#endif
                                          gboolean show_buttons,
                                          const gboolean always_hide)
 {
@@ -2710,9 +2786,13 @@ gboolean dt_iop_show_hide_header_buttons(dt_iop_module_t *module,
   GtkWidget *focused = gtk_container_get_focus_child(GTK_CONTAINER(header));
   if(focused && GTK_IS_ENTRY(focused)) return TRUE;
 
+#ifdef DT_GTK4
+  if(event && darktable.develop->darkroom_skip_mouse_events) return TRUE;
+#else
   if(event && (darktable.develop->darkroom_skip_mouse_events ||
      event->detail == GDK_NOTIFY_INFERIOR ||
      event->mode != GDK_CROSSING_NORMAL)) return TRUE;
+#endif
 
   const char *config = dt_conf_get_string_const("darkroom/ui/hide_header_buttons");
 
@@ -3134,22 +3214,20 @@ void dt_iop_gui_set_expander(dt_iop_module_t *module)
   module->header = header;
 
   /* setup the header box */
-  g_signal_connect(G_OBJECT(header_evb), "button-release-event",
-                   G_CALLBACK(_iop_plugin_header_button_release), module);
+  dt_gui_connect_click(header_evb, NULL, _iop_plugin_header_button_release, module);
+
+#ifndef DT_GTK4
   gtk_widget_add_events(header_evb, GDK_POINTER_MOTION_MASK);
-  g_signal_connect(G_OBJECT(header_evb), "enter-notify-event",
-                   G_CALLBACK(_header_motion_notify_show_callback), module);
-  g_signal_connect(G_OBJECT(header_evb), "leave-notify-event",
-                   G_CALLBACK(_header_motion_notify_hide_callback), module);
+#endif
+  dt_gui_connect_motion(header_evb, NULL, _header_motion_notify_show_callback, _header_motion_notify_hide_callback, module);
 
   /* connect mouse button callbacks for focus and presets */
-  g_signal_connect(G_OBJECT(body_evb), "button-press-event",
-                   G_CALLBACK(_iop_plugin_body_button_press), module);
+  dt_gui_connect_click(body_evb, _iop_plugin_body_button_press, NULL, module);
+
+#ifndef DT_GTK4
   gtk_widget_add_events(body_evb, GDK_POINTER_MOTION_MASK);
-  g_signal_connect(G_OBJECT(body_evb), "enter-notify-event",
-                   G_CALLBACK(_header_motion_notify_show_callback), module);
-  g_signal_connect(G_OBJECT(body_evb), "leave-notify-event",
-                   G_CALLBACK(_header_motion_notify_hide_callback), module);
+#endif
+  dt_gui_connect_motion(body_evb, NULL, _header_motion_notify_show_callback, _header_motion_notify_hide_callback, module);
 
   /*
    * initialize the header widgets
