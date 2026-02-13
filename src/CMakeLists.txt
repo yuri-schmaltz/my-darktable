@@ -86,6 +86,7 @@ FILE(GLOB SOURCE_FILES
   "common/usermanual_url.c"
   "common/utility.c"
   "common/variables.c"
+  "common/dt_ai_core.c"
   "common/wb_presets.c"
   "control/conf.c"
   "control/control.c"
@@ -610,6 +611,18 @@ if(USE_ICU)
     set(SOURCES ${SOURCES} "common/sqliteicu.c")
   endif(ICU_FOUND)
 endif(USE_ICU)
+
+if(USE_ONNX)
+  find_package(ONNXRuntime)
+  if(ONNXRuntime_FOUND)
+    add_definitions(-DHAVE_ONNXRUNTIME)
+    include_directories(SYSTEM ${ONNXRuntime_INCLUDE_DIRS})
+    list(APPEND LIBS ${ONNXRuntime_LIBRARIES})
+    message(STATUS "ONNX Runtime support: Enabled")
+  else()
+    message(STATUS "ONNX Runtime support: Disabled (Library not found)")
+  endif()
+endif(USE_ONNX)
 
 if(USE_OPENCL)
   add_definitions("-DHAVE_OPENCL")
