@@ -475,7 +475,7 @@ set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME DTApplication)
 include(data/supported_extensions.cmake) # this file needs to be included first as it gets amended in bin/
 add_subdirectory(src "${DARKTABLE_BINDIR}") # directory needs to be there before data directory so that the correct CSS file gets installed
 add_subdirectory(data "${DARKTABLE_DATADIR}")
-add_subdirectory(doc)
+add_subdirectory(docs)
 add_subdirectory(tools "${DARKTABLE_DATADIR}/tools")
 
 # This contains fixup_bundle

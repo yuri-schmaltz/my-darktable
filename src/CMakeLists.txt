@@ -310,8 +310,11 @@ list(APPEND LIBS ${LIBXML2_LIBRARIES})
 add_definitions(${LIBXML2_DEFINITIONS})
 
 # Check for potrace
-find_package(Potrace REQUIRED)
-list(APPEND LIBS ${POTRACE_LIBRARY})
+find_package(Potrace)
+if(POTRACE_FOUND)
+  list(APPEND LIBS ${POTRACE_LIBRARY})
+  add_definitions("-DHAVE_POTRACE")
+endif()
 
 if(USE_CAMERA_SUPPORT)
   find_package(Gphoto2 2.5)

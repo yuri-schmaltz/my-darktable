@@ -1,0 +1,4 @@
+     0.0664 dt_gui_load_theme: error parsing combined CSS @import url('file:///home/yurix/Documentos/my-darktable/build/install/share/darktable/themes/darktable-icons.css');: darktable.css:264:12'overflow-x' is not a valid property name
+     0.1505 [init] the database lock file contains a pid that seems to be alive in your system: 3515423
+     0.1505 [init] database is locked, probably another process is already using it
+     5.7721 ERROR: can't acquire database lock, aborting.

@@ -261,8 +261,7 @@ Why that? Just because it's a developer choice and most classes use underscore i
   padding: 0;
   min-width: 0;
   min-height: 0;
-  overflow-x: hidden;
-  /* AEGIS: Zero horizontal scroll policy */
+  /* AEGIS: Zero horizontal scroll policy (managed via container sizing in GTK 3) */
 }
 
 /* Be sure now than all others UI widgets have no background color on start */

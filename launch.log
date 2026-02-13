@@ -1,0 +1,121 @@
+     0.0659 dt_gui_load_theme: error parsing combined CSS @import url('file:///home/yurix/Documentos/my-darktable/build/install/share/darktable/themes/darktable.css');: aegis_tokens.css:20:36'4px' is not a valid color name
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.728: drawing failure for widget 'GtkDrawingArea': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.728: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.728: drawing failure for widget 'GtkDarktableRangeSelect': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.728: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.728: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.728: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.728: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.728: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.728: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.728: drawing failure for widget 'GtkGrid': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.728: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.728: drawing failure for widget 'GtkWindow': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.774: drawing failure for widget 'GtkDrawingArea': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.774: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.774: drawing failure for widget 'GtkDarktableRangeSelect': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.774: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.774: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.774: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.774: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.774: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.774: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.774: drawing failure for widget 'GtkGrid': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.774: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.774: drawing failure for widget 'GtkWindow': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.840: drawing failure for widget 'GtkDrawingArea': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.840: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.840: drawing failure for widget 'GtkDarktableRangeSelect': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.840: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.840: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.841: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.841: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.841: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.841: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.841: drawing failure for widget 'GtkGrid': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.841: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:38.841: drawing failure for widget 'GtkWindow': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:46.628: drawing failure for widget 'GtkDrawingArea': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:46.628: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:46.628: drawing failure for widget 'GtkDarktableRangeSelect': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:46.628: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:46.628: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:46.628: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:46.628: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:46.628: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:46.628: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:46.628: drawing failure for widget 'GtkGrid': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:46.629: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:46.629: drawing failure for widget 'GtkWindow': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:48.683: drawing failure for widget 'GtkDrawingArea': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:48.683: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:48.683: drawing failure for widget 'GtkDarktableRangeSelect': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:48.683: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:48.683: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:48.683: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:48.683: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:48.683: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:48.683: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:48.683: drawing failure for widget 'GtkGrid': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:48.684: drawing failure for widget 'GtkBox': invalid matrix (not invertible)
+
+(org.darktable.darktable:3515061): Gtk-WARNING **: 02:06:48.684: drawing failure for widget 'GtkWindow': invalid matrix (not invertible)

@@ -16,8 +16,9 @@
     along with darktable.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <stddef.h>
+#ifdef HAVE_POTRACE
 #include <potracelib.h>
+#endif
 
 #include "develop/masks.h"
 
@@ -25,6 +26,7 @@
 #include <omp.h>
 #endif
 
+#ifdef HAVE_POTRACE
 /* Macros as in Inkscape */
 #define BM_WORDBITS   (8 * (int)sizeof(potrace_word))
 #define BM_HIBIT      ((potrace_word)1 << (BM_WORDBITS-1))
@@ -65,9 +67,11 @@ static void _bm_free(potrace_bitmap_t *bm)
     free(bm);
   }
 }
+#endif
 
 #define SET_THRESHOLD 0.6f
 
+#ifdef HAVE_POTRACE
 static inline void _scale_point(float p[2],
                                 const float xscale,
                                 const float yscale,
@@ -136,12 +140,14 @@ static void _add_point(dt_masks_form_t *form,
 }
 
 static uint32_t formnb = 0;
+#endif
 
 GList *ras2forms(const float *mask,
                  const int width,
                  const int height,
                  const dt_image_t *const image)
 {
+#ifdef HAVE_POTRACE
   GList *forms = NULL;
 
   //  create bitmap mask for potrace
@@ -217,6 +223,9 @@ GList *ras2forms(const float *mask,
   _bm_free(bm);
 
   return forms;
+#else
+  return NULL;
+#endif
 }
 
 // clang-format off
