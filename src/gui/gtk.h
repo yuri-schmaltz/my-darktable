@@ -762,10 +762,12 @@ static inline void dt_gui_box_pack_end(GtkBox *box, GtkWidget *widget, gboolean 
 #define gtk_box_pack_end(box, widget, expand, fill, padding) \
   dt_gui_box_pack_end(GTK_BOX(box), GTK_WIDGET(widget), expand, fill, padding)
 
+#ifdef DT_GTK4
 #define gtk_container_add(container, widget) \
   dt_gui_set_child(GTK_WIDGET(container), GTK_WIDGET(widget))
 #define gtk_container_remove(container, widget) \
   dt_gui_container_remove(GTK_WIDGET(container), GTK_WIDGET(widget))
+#endif
 
 static inline GtkWidget *dt_gui_scroll_wrap(GtkWidget *widget)
 {

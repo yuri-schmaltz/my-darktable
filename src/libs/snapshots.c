@@ -599,9 +599,11 @@ static void _init_snapshot_entry(dt_lib_module_t *self,
   s->name = gtk_label_new("");
   gtk_label_set_ellipsize(GTK_LABEL(s->name), PANGO_ELLIPSIZE_MIDDLE);
   gtk_widget_set_halign(s->name, GTK_ALIGN_START);
+  gtk_widget_set_hexpand(s->name, TRUE);
 
   s->entry = gtk_entry_new();
   gtk_widget_set_halign(s->entry, GTK_ALIGN_FILL);
+  gtk_widget_set_hexpand(s->entry, TRUE);
   g_signal_connect(G_OBJECT(s->entry), "activate",
                    G_CALLBACK(_entry_activated_callback), self);
 
@@ -833,21 +835,12 @@ void gui_init(dt_lib_module_t *self)
     _clear_snapshot_entry(s);
     _init_snapshot_entry(self, s);
 
-    GtkWidget *box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
 
-    // 4 items inside box, num, status, name, label
-
-    gtk_box_pack_start(GTK_BOX(box), s->num, FALSE, FALSE, 0);
-    gtk_box_pack_start(GTK_BOX(box), s->status, FALSE, FALSE, 0);
-    gtk_box_pack_start(GTK_BOX(box), s->name, TRUE, TRUE, 0);
-    gtk_box_pack_start(GTK_BOX(box), s->entry, TRUE, TRUE, 0);
-
-    gtk_widget_show_all(box);
 
     // hide entry, will be used only when editing
     gtk_widget_hide(s->entry);
 
-    GtkWidget *button_content_box = dt_gui_hbox(s->num, s->status, s->name, s->entry, (GtkWidget *)NULL);
+    GtkWidget *button_content_box = dt_gui_hbox(s->num, s->status, s->name, s->entry);
     dt_gui_set_child(s->button, button_content_box);
 
     // add snap button and restore button

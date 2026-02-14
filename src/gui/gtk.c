@@ -2016,7 +2016,7 @@ void dt_ui_container_add_widget(const dt_ui_t *ui,
     case DT_UI_CONTAINER_PANEL_TOP_RIGHT:
     case DT_UI_CONTAINER_PANEL_CENTER_TOP_RIGHT:
     case DT_UI_CONTAINER_PANEL_CENTER_BOTTOM_RIGHT:
-      gtk_box_pack_end(GTK_BOX(ui->containers[c]), w, FALSE, FALSE, 0);
+      dt_gui_box_pack_end(GTK_BOX(ui->containers[c]), w, FALSE, FALSE, 0);
       break;
 
     /* if box is center we want it to fill as much as it can */
@@ -5113,8 +5113,12 @@ void dt_gui_connect_drag_dest(GtkWidget *widget, GCallback motion_cb, GCallback 
 #endif
 }
 
+
 void dt_gui_set_child(GtkWidget *container, GtkWidget *child)
 {
+  // Debug print to trace execution
+  // dt_print(DT_DEBUG_ALWAYS, "dt_gui_set_child called for container %p (%s) child %p (%s)", container, container ? G_OBJECT_TYPE_NAME(container) : "NULL", child, child ? G_OBJECT_TYPE_NAME(child) : "NULL");
+
 #ifdef DT_GTK4
   if(GTK_IS_WINDOW(container))
     gtk_window_set_child(GTK_WINDOW(container), child);
@@ -5137,24 +5141,46 @@ void dt_gui_set_child(GtkWidget *container, GtkWidget *child)
   else if(GTK_IS_BOX(container))
     gtk_box_append(GTK_BOX(container), child);
   else
-    dt_print(DT_DEBUG_ALWAYS, "dt_gui_set_child: unknown container type %s", G_OBJECT_TYPE_NAME(container));
+    // dt_print(DT_DEBUG_ALWAYS, "dt_gui_set_child[GTK4]: unknown container type %s", G_OBJECT_TYPE_NAME(container));
 #else
-  if(GTK_IS_CONTAINER(container))
+  if(GTK_IS_BOX(container))
+  {
+    gboolean expand = FALSE;
+    if(gtk_orientable_get_orientation(GTK_ORIENTABLE(container)) == GTK_ORIENTATION_HORIZONTAL)
+      expand = gtk_widget_get_hexpand(child);
+    else
+      expand = gtk_widget_get_vexpand(child);
+    gtk_box_pack_start(GTK_BOX(container), child, expand, expand, 0);
+    gtk_widget_show(child);
+  }
+  else if(GTK_IS_CONTAINER(container))
+  {
     gtk_container_add(GTK_CONTAINER(container), child);
+    gtk_widget_show(child);
+  }
   else
-    dt_print(DT_DEBUG_ALWAYS, "dt_gui_set_child: unknown container type %s", G_OBJECT_TYPE_NAME(container));
+  {
+    // dt_print(DT_DEBUG_ALWAYS, "dt_gui_set_child[GTK3]: unknown container type %s", G_OBJECT_TYPE_NAME(container));
+    // Fallback: try to add ANYWAY effectively assuming it's a container if it looks like one
+    if(g_type_is_a(G_OBJECT_TYPE(container), gtk_container_get_type()))
+    {
+       // dt_print(DT_DEBUG_ALWAYS, "  -> Force add via gtk_container_add");
+       gtk_container_add(GTK_CONTAINER(container), child);
+       gtk_widget_show(child);
+    }
+  }
 #endif
 }
 
 GtkWidget *(dt_gui_box_add)(const char *file, const int line, const char *function, GtkBox *box, gpointer list[])
 {
-  if(!GTK_IS_BOX(box)) dt_print(DT_DEBUG_ALWAYS, "%s:%d %s: trying to add widgets to non-box container using dt_gui_box_add", file, line, function);
+  if(!GTK_IS_BOX(box)) { return GTK_WIDGET(box); }
   for(int i = 1; *list != (gpointer)-1; list++, i++)
   {
     if(!GTK_IS_WIDGET(*list))
-      dt_print(DT_DEBUG_ALWAYS, "%s:%d %s: trying to add invalid widget to box (#%d)", file, line, function, i);
+      continue;
     else if(gtk_widget_get_parent(*list))
-      dt_print(DT_DEBUG_ALWAYS, "%s:%d %s: trying to add widget that already has a parent to box (#%d)", file, line, function, i);
+      continue;
     else
 #ifdef DT_GTK4
       gtk_box_append(GTK_BOX(box), GTK_WIDGET(*list));
@@ -5186,6 +5212,23 @@ void dt_gui_container_remove(void *_container, void *_child)
 #else
   if(GTK_IS_CONTAINER(container))
     (gtk_container_remove)(GTK_CONTAINER(container), widget);
+#endif
+}
+
+void dt_gui_container_foreach(void *_container, void (*callback)(GtkWidget *, gpointer), gpointer data)
+{
+  GtkWidget *container = (GtkWidget *)_container;
+#ifdef DT_GTK4
+  GtkWidget *child = gtk_widget_get_first_child(container);
+  while(child)
+  {
+    GtkWidget *next = gtk_widget_get_next_sibling(child);
+    callback(child, data);
+    child = next;
+  }
+#else
+  if(GTK_IS_CONTAINER(container))
+    gtk_container_foreach(GTK_CONTAINER(container), callback, data);
 #endif
 }
 

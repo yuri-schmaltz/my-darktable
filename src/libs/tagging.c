@@ -3446,11 +3446,11 @@ void gui_init(dt_lib_module_t *self)
   // attached_view
   box = GTK_BOX(gtk_box_new(GTK_ORIENTATION_VERTICAL, 0));
 
-  gtk_box_pack_start(GTK_BOX(self->widget), GTK_WIDGET(box), TRUE, TRUE, 0);
+  dt_gui_box_pack_start(GTK_BOX(self->widget), GTK_WIDGET(box), TRUE, TRUE, 0);
   view = GTK_TREE_VIEW(gtk_tree_view_new());
   w = dt_ui_resize_wrap(GTK_WIDGET(view), 200,
                         "plugins/lighttable/tagging/heightattachedwindow");
-  gtk_box_pack_start(box, w, TRUE, TRUE, 0);
+  dt_gui_box_pack_start(box, w, TRUE, TRUE, 0);
   d->attached_view = view;
   gtk_tree_view_set_enable_search(view, FALSE);
   gtk_tree_view_set_headers_visible(view, FALSE);
@@ -3505,17 +3505,16 @@ void gui_init(dt_lib_module_t *self)
                    G_CALLBACK(_tree_selection_changed), self);
 
   // attach/detach buttons
-  hbox = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0));
-
   d->attach_button = dt_action_button_new(self, N_("attach"),
                                           _attach_button_clicked, self,
                                           _("attach tag to all selected images"), 0, 0);
-  gtk_box_pack_start(hbox, d->attach_button, TRUE, TRUE, 0);
-
+  gtk_widget_set_hexpand(d->attach_button, TRUE);
   d->detach_button = dt_action_button_new(self, N_("detach"),
                                           _detach_button_clicked, self,
                                           _("detach tag from all selected images"), 0, 0);
-  gtk_box_pack_start(hbox, d->detach_button, TRUE, TRUE, 0);
+  gtk_widget_set_hexpand(d->detach_button, TRUE);
+
+  hbox = GTK_BOX(dt_gui_hbox(d->attach_button, d->detach_button));
 
   dt_action_t *toggle = dt_action_section(DT_ACTION(self), N_("toggle"));
 
@@ -3538,11 +3537,11 @@ void gui_init(dt_lib_module_t *self)
   d->dttags_flag = FALSE;
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(d->toggle_dttags_button), FALSE);
 
-  gtk_box_pack_start(box, GTK_WIDGET(hbox), FALSE, TRUE, 0);
+  dt_gui_box_pack_start(box, GTK_WIDGET(hbox), FALSE, TRUE, 0);
 
   // dictionary_view
   box = GTK_BOX(gtk_box_new(GTK_ORIENTATION_VERTICAL, 0));
-  gtk_box_pack_start(GTK_BOX(self->widget), GTK_WIDGET(box), TRUE, TRUE, 0);
+  dt_gui_box_pack_start(GTK_BOX(self->widget), GTK_WIDGET(box), TRUE, TRUE, 0);
 
   hbox = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0));
 
@@ -3555,7 +3554,7 @@ void gui_init(dt_lib_module_t *self)
        "\npress Enter to create a new tag and attach it on selected images"
        "\npress Tab or Down key to go to the first matching tag"
        "\npress shift+Tab to select the first attached user tag"));
-  gtk_box_pack_start(hbox, w, TRUE, TRUE, 0);
+  dt_gui_box_pack_start(hbox, w, TRUE, TRUE, 0);
   gtk_widget_add_events(GTK_WIDGET(w), GDK_KEY_RELEASE_MASK);
   g_signal_connect(G_OBJECT(w), "changed",
                    G_CALLBACK(_tag_name_changed), (gpointer)self);
@@ -3568,7 +3567,7 @@ void gui_init(dt_lib_module_t *self)
   gtk_box_pack_end(hbox, button, FALSE, TRUE, 0);
   g_signal_connect(G_OBJECT(button), "clicked",
                    G_CALLBACK(_clear_entry_button_callback), (gpointer)self);
-  gtk_box_pack_start(box, GTK_WIDGET(hbox), FALSE, TRUE, 0);
+  dt_gui_box_pack_start(box, GTK_WIDGET(hbox), FALSE, TRUE, 0);
   dt_gui_add_class(GTK_WIDGET(box), "dt_spacing_sw");
   d->clear_button = button;
   dt_action_define(DT_ACTION(self), NULL, N_("clear entry"), button, &dt_action_def_button);
@@ -3577,7 +3576,7 @@ void gui_init(dt_lib_module_t *self)
   view = GTK_TREE_VIEW(gtk_tree_view_new());
   w = dt_ui_resize_wrap(GTK_WIDGET(view), 200,
                         "plugins/lighttable/tagging/heightdictionarywindow");
-  gtk_box_pack_start(box, w, TRUE, TRUE, 0);
+  dt_gui_box_pack_start(box, w, TRUE, TRUE, 0);
   d->dictionary_view = view;
   gtk_tree_view_set_enable_search(view, FALSE);
   gtk_tree_view_set_headers_visible(view, FALSE);
