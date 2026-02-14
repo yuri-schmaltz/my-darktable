@@ -120,8 +120,8 @@ void gui_init(dt_lib_module_t *self)
     if(lighttable || darkroom)
     {
       GtkWidget *w = _lib_viewswitcher_create_label(view);
-      gtk_box_pack_start(GTK_BOX(self->widget), w, FALSE, FALSE, 0);
-      d->labels = g_list_append(d->labels, gtk_bin_get_child(GTK_BIN(w)));
+      dt_gui_box_pack_start(GTK_BOX(self->widget), w, FALSE, FALSE, 0);
+      d->labels = g_list_append(d->labels, dt_gui_container_nth_child(w, 0));
 
       gtk_widget_set_sensitive(w, !(lighttable && gimping));
       SHORTCUT_TOOLTIP(view, w);
@@ -132,7 +132,7 @@ void gui_init(dt_lib_module_t *self)
         GtkWidget *sep = gtk_label_new("|");
         gtk_widget_set_halign(sep, GTK_ALIGN_START);
         gtk_widget_set_name(sep, "view-label");
-        gtk_box_pack_start(GTK_BOX(self->widget), sep, FALSE, FALSE, 0);
+        dt_gui_box_pack_start(GTK_BOX(self->widget), sep, FALSE, FALSE, 0);
       }
     }
     else
@@ -150,7 +150,7 @@ void gui_init(dt_lib_module_t *self)
 
         gtk_list_store_insert_with_values(model, NULL, -1, TEXT_COLUMN, _("other"), VIEW_COLUMN, NULL, SENSITIVE_COLUMN, 0, -1);
 
-        gtk_box_pack_start(GTK_BOX(self->widget), d->dropdown, FALSE, FALSE, 0);
+        dt_gui_box_pack_start(GTK_BOX(self->widget), d->dropdown, FALSE, FALSE, 0);
         g_signal_connect(G_OBJECT(d->dropdown), "changed", G_CALLBACK(_dropdown_changed), d);
       }
 
@@ -250,7 +250,7 @@ static GtkWidget *_lib_viewswitcher_create_label(dt_view_t *view)
 {
   GtkWidget *eb = gtk_event_box_new();
   GtkWidget *b = gtk_label_new(view->name(view));
-  gtk_container_add(GTK_CONTAINER(eb), b);
+  dt_gui_set_child(eb, b);
   /*setup label*/
   gtk_widget_set_halign(b, GTK_ALIGN_START);
   g_object_set_data(G_OBJECT(b), "view-label", (gchar *)view->name(view));

@@ -483,24 +483,24 @@ GtkWidget *dt_ui_resize_wrap(GtkWidget *w,
                              char *config_str);
 
 // check whether the given container has any user-added children
-gboolean dt_gui_container_has_children(GtkContainer *container);
+gboolean dt_gui_container_has_children(void *container);
 // return a count of the user-added children in the given container
-int dt_gui_container_num_children(GtkContainer *container);
+int dt_gui_container_num_children(void *container);
 // return the first child of the given container
-GtkWidget *dt_gui_container_first_child(GtkContainer *container);
+GtkWidget *dt_gui_container_first_child(void *container);
 // return the requested child of the given container, or NULL if it has fewer children
-GtkWidget *dt_gui_container_nth_child(GtkContainer *container,
+GtkWidget *dt_gui_container_nth_child(void *container,
                                       const int which);
-
+void dt_gui_container_foreach(void *container, void (*callback)(GtkWidget *, gpointer), gpointer data);
 // remove all of the children we've added to the container.  Any which
 // no longer have any references will be destroyed.
-void dt_gui_container_remove_children(GtkContainer *container);
+void dt_gui_container_remove_children(void *container);
 
 // delete all of the children we've added to the container.  Use this
 // function only if you are SURE there are no other references to any
 // of the children (if in doubt, use dt_gui_container_remove_children
 // instead; it's a bit slower but safer).
-void dt_gui_container_destroy_children(GtkContainer *container);
+void dt_gui_container_destroy_children(void *container);
 
 #ifdef DT_GTK4
 void dt_gui_menu_popup(GtkWidget *menu,
@@ -666,6 +666,11 @@ static inline void dt_gui_remove_class(GtkWidget *widget, const char *class_name
 }
 
 #ifdef DT_GTK4
+void dt_gui_gtk_widget_show_all(GtkWidget *widget);
+#define gtk_widget_show_all(widget) dt_gui_gtk_widget_show_all(GTK_WIDGET(widget))
+#endif
+
+#ifdef DT_GTK4
 static inline void dt_gui_box_pack_start(GtkBox *box, GtkWidget *widget, gboolean expand, gboolean fill, guint padding)
 {
   if(expand)
@@ -724,6 +729,8 @@ static inline void dt_gui_box_pack_end(GtkBox *box, GtkWidget *widget, gboolean 
   dt_gui_box_pack_end(GTK_BOX(box), GTK_WIDGET(widget), expand, fill, padding)
 #define gtk_container_add(container, widget) \
   dt_gui_set_child(GTK_WIDGET(container), GTK_WIDGET(widget))
+#define gtk_container_remove(container, widget) \
+  dt_gui_container_remove(GTK_WIDGET(container), GTK_WIDGET(widget))
 #endif
 
 static inline GtkWidget *dt_gui_scroll_wrap(GtkWidget *widget)

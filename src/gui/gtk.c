@@ -4509,41 +4509,70 @@ GtkWidget *dt_ui_resize_wrap(GtkWidget *w,
   return w;
 }
 
-gboolean dt_gui_container_has_children(GtkContainer *container)
+gboolean dt_gui_container_has_children(void *_container)
 {
-  g_return_val_if_fail(GTK_IS_CONTAINER(container), FALSE);
-  GList *children = gtk_container_get_children(container);
+  GtkWidget *container = GTK_WIDGET(_container);
+  g_return_val_if_fail(GTK_IS_WIDGET(container), FALSE);
+#ifdef DT_GTK4
+  return gtk_widget_get_first_child(container) != NULL;
+#else
+  GList *children = gtk_container_get_children(GTK_CONTAINER(container));
   const gboolean has_children = children != NULL;
   g_list_free(children);
   return has_children;
+#endif
 }
 
-int dt_gui_container_num_children(GtkContainer *container)
+int dt_gui_container_num_children(void *_container)
 {
-  g_return_val_if_fail(GTK_IS_CONTAINER(container), FALSE);
-  GList *children = gtk_container_get_children(container);
+  GtkWidget *container = GTK_WIDGET(_container);
+  g_return_val_if_fail(GTK_IS_WIDGET(container), FALSE);
+#ifdef DT_GTK4
+  int count = 0;
+  for(GtkWidget *child = gtk_widget_get_first_child(container); child != NULL; child = gtk_widget_get_next_sibling(child))
+    count++;
+  return count;
+#else
+  GList *children = gtk_container_get_children(GTK_CONTAINER(container));
   const int num_children = g_list_length(children);
   g_list_free(children);
   return num_children;
+#endif
 }
 
-GtkWidget *dt_gui_container_first_child(GtkContainer *container)
+GtkWidget *dt_gui_container_first_child(void *_container)
 {
-  g_return_val_if_fail(GTK_IS_CONTAINER(container), NULL);
-  GList *children = gtk_container_get_children(container);
+  GtkWidget *container = GTK_WIDGET(_container);
+  g_return_val_if_fail(GTK_IS_WIDGET(container), NULL);
+#ifdef DT_GTK4
+  return gtk_widget_get_first_child(container);
+#else
+  GList *children = gtk_container_get_children(GTK_CONTAINER(container));
   GtkWidget *child = children ? (GtkWidget*)children->data : NULL;
   g_list_free(children);
   return child;
+#endif
 }
 
-GtkWidget *dt_gui_container_nth_child(GtkContainer *container,
+GtkWidget *dt_gui_container_nth_child(void *_container,
                                       const int which)
 {
-  g_return_val_if_fail(GTK_IS_CONTAINER(container), NULL);
-  GList *children = gtk_container_get_children(container);
-  GtkWidget *child = (GtkWidget*)g_list_nth_data(children, which);
+  GtkWidget *container = GTK_WIDGET(_container);
+  g_return_val_if_fail(GTK_IS_WIDGET(container), NULL);
+#ifdef DT_GTK4
+  int count = 0;
+  for(GtkWidget *child = gtk_widget_get_first_child(container); child != NULL; child = gtk_widget_get_next_sibling(child))
+  {
+    if(count == which) return child;
+    count++;
+  }
+  return NULL;
+#else
+  GList *children = gtk_container_get_children(GTK_CONTAINER(container));
+  GtkWidget *child = g_list_nth_data(children, which);
   g_list_free(children);
   return child;
+#endif
 }
 
 static void _remove_child(GtkWidget *widget,
@@ -4552,10 +4581,19 @@ static void _remove_child(GtkWidget *widget,
   gtk_container_remove((GtkContainer*)data, widget);
 }
 
-void dt_gui_container_remove_children(GtkContainer *container)
+void dt_gui_container_remove_children(void *_container)
 {
-  g_return_if_fail(GTK_IS_CONTAINER(container));
-  gtk_container_foreach(container, _remove_child, container);
+  GtkWidget *container = GTK_WIDGET(_container);
+  g_return_if_fail(GTK_IS_WIDGET(container));
+#ifdef DT_GTK4
+  GtkWidget *child;
+  while((child = gtk_widget_get_first_child(container)) != NULL)
+  {
+    dt_gui_container_remove(container, child);
+  }
+#else
+  gtk_container_foreach(GTK_CONTAINER(container), _remove_child, container);
+#endif
 }
 
 static void _delete_child(GtkWidget *widget,
@@ -4565,10 +4603,29 @@ static void _delete_child(GtkWidget *widget,
   gtk_widget_destroy(widget);
 }
 
-void dt_gui_container_destroy_children(GtkContainer *container)
+void dt_gui_container_destroy_children(void *_container)
 {
-  g_return_if_fail(GTK_IS_CONTAINER(container));
-  gtk_container_foreach(container, _delete_child, NULL);
+  GtkWidget *container = GTK_WIDGET(_container);
+  g_return_if_fail(GTK_IS_WIDGET(container));
+#ifdef DT_GTK4
+  GtkWidget *child;
+  while((child = gtk_widget_get_first_child(container)) != NULL)
+  {
+    // In GTK4, destroying a widget is often done by unreffing or just removing from parent
+    // but windows need gtk_window_destroy.
+    if(GTK_IS_WINDOW(child))
+      gtk_window_destroy(GTK_WINDOW(child));
+    else
+    {
+      // For general widgets, removing from parent is often enough if no other refs,
+      // but we might need a more precise "destroy" equivalent if it exists (it doesn't in the same way).
+      // gtk_widget_unparent is the closest for non-windows.
+      gtk_widget_unparent(child);
+    }
+  }
+#else
+  gtk_container_foreach(GTK_CONTAINER(container), _delete_child, NULL);
+#endif
 }
 
 #ifdef DT_GTK4
@@ -5075,6 +5132,10 @@ void dt_gui_set_child(GtkWidget *container, GtkWidget *child)
     gtk_popover_set_child(GTK_POPOVER(container), child);
   else if(GTK_IS_VIEWPORT(container))
     gtk_viewport_set_child(GTK_VIEWPORT(container), child);
+  else if(GTK_IS_FLOW_BOX(container))
+    gtk_flow_box_insert(GTK_FLOW_BOX(container), child, -1);
+  else if(GTK_IS_BOX(container))
+    gtk_box_append(GTK_BOX(container), child);
   else
     dt_print(DT_DEBUG_ALWAYS, "dt_gui_set_child: unknown container type %s", G_OBJECT_TYPE_NAME(container));
 #else
@@ -5104,6 +5165,24 @@ GtkWidget *(dt_gui_box_add)(const char *file, const int line, const char *functi
 
   return GTK_WIDGET(box);
 }
+
+#ifdef DT_GTK4
+void dt_gui_container_remove(GtkWidget *container, GtkWidget *widget)
+{
+  if(GTK_IS_BOX(container))
+    gtk_box_remove(GTK_BOX(container), widget);
+  else if(GTK_IS_WINDOW(container))
+    gtk_window_set_child(GTK_WINDOW(container), NULL);
+  else if(GTK_IS_SCROLLED_WINDOW(container))
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(container), NULL);
+  else if(GTK_IS_POPOVER(container))
+    gtk_popover_set_child(GTK_POPOVER(container), NULL);
+  else if(GTK_IS_VIEWPORT(container))
+    gtk_viewport_set_child(GTK_VIEWPORT(container), NULL);
+  else
+    dt_print(DT_DEBUG_ALWAYS, "dt_gui_container_remove: unknown container type %s", G_OBJECT_TYPE_NAME(container));
+}
+#endif
 
 static gboolean _focus_out_commit(GtkCellEditable *editable,
                                   GdkEvent *event,
@@ -5171,4 +5250,17 @@ void dt_gui_dialog_restore_size(GtkDialog *dialog, const char *conf)
 // modelines: These editor modelines have been set for all relevant files by tools/update_modelines.py
 // vim: shiftwidth=2 expandtab tabstop=2 cindent
 // kate: tab-indents: off; indent-width 2; replace-tabs on; indent-mode cstyle; remove-trailing-spaces modified;
+
+#ifdef DT_GTK4
+void dt_gui_gtk_widget_show_all(GtkWidget *widget)
+{
+  g_return_if_fail(GTK_IS_WIDGET(widget));
+  gtk_widget_show(widget);
+  for(GtkWidget *child = gtk_widget_get_first_child(widget); child != NULL; child = gtk_widget_get_next_sibling(child))
+  {
+    dt_gui_gtk_widget_show_all(child);
+  }
+}
+#endif
+
 // clang-format on

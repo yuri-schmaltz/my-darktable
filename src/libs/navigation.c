@@ -125,7 +125,7 @@ static void _lib_navigation_control_redraw_callback(gpointer instance,
   --darktable.gui->reset;
   g_free(zoomline);
 
-  gtk_widget_queue_draw(gtk_bin_get_child(GTK_BIN(self->widget)));
+  gtk_widget_queue_draw(dt_gui_container_nth_child(self->widget, 0));
 }
 
 
@@ -273,10 +273,10 @@ void gui_init(dt_lib_module_t *self)
   gtk_widget_set_name(d->zoom, "nav-zoom");
 
   self->widget = gtk_overlay_new();
-  gtk_container_add(GTK_CONTAINER(self->widget), thumbnail);
+  dt_gui_set_child(self->widget, thumbnail);
   gtk_overlay_add_overlay(GTK_OVERLAY(self->widget), d->zoom);
   dt_gui_add_class(self->widget, "dt_plugin_ui_main");
-  gtk_widget_show_all(self->widget);
+  dt_gui_gtk_widget_show_all(self->widget);
 
   darktable.lib->proxy.navigation.module = self;
 }

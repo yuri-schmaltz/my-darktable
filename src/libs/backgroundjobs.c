@@ -76,7 +76,9 @@ void gui_init(dt_lib_module_t *self)
 {
   /* initialize base */
   self->widget = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+#ifndef DT_GTK4
   gtk_widget_set_no_show_all(self->widget, TRUE);
+#endif
 
   /* setup proxy */
   dt_pthread_mutex_lock(&darktable.control->progress_system.mutex);
@@ -129,9 +131,9 @@ static gboolean _added_gui_thread(gpointer user_data)
   _added_gui_thread_t *params = (_added_gui_thread_t *)user_data;
 
   /* lets show jobbox if its hidden */
-  gtk_box_pack_start(GTK_BOX(params->self_widget), params->instance_widget, TRUE, FALSE, 0);
+  dt_gui_box_pack_start(GTK_BOX(params->self_widget), params->instance_widget, TRUE, FALSE, 0);
   gtk_box_reorder_child(GTK_BOX(params->self_widget), params->instance_widget, 1);
-  gtk_widget_show_all(params->instance_widget);
+  dt_gui_gtk_widget_show_all(params->instance_widget);
   gtk_widget_show(params->self_widget);
 
   GdkCursor *cursor = gdk_cursor_new_for_display(gdk_display_get_default(), GDK_LEFT_PTR);
@@ -161,20 +163,20 @@ static void *_lib_backgroundjobs_added(dt_lib_module_t *self, gboolean has_progr
   dt_gui_add_class(GTK_WIDGET(instance->widget), "dt_big_btn_canvas");
   GtkBox *vbox = GTK_BOX(gtk_box_new(GTK_ORIENTATION_VERTICAL, 0));
   instance->hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-  gtk_container_add(GTK_CONTAINER(instance->widget), GTK_WIDGET(vbox));
+  dt_gui_set_child(instance->widget, GTK_WIDGET(vbox));
 
   /* add job label */
   instance->label = gtk_label_new(message);
   gtk_widget_set_halign(instance->label, GTK_ALIGN_START);
   gtk_label_set_ellipsize(GTK_LABEL(instance->label), PANGO_ELLIPSIZE_END);
-  gtk_box_pack_start(GTK_BOX(instance->hbox), GTK_WIDGET(instance->label), TRUE, TRUE, 0);
-  gtk_box_pack_start(GTK_BOX(vbox), GTK_WIDGET(instance->hbox), TRUE, TRUE, 0);
+  dt_gui_box_pack_start(GTK_BOX(instance->hbox), GTK_WIDGET(instance->label), TRUE, TRUE, 0);
+  dt_gui_box_pack_start(GTK_BOX(vbox), GTK_WIDGET(instance->hbox), TRUE, TRUE, 0);
 
   /* use progressbar ? */
   if(has_progress_bar)
   {
     instance->progressbar = gtk_progress_bar_new();
-    gtk_box_pack_start(GTK_BOX(vbox), instance->progressbar, TRUE, FALSE, 0);
+    dt_gui_box_pack_start(GTK_BOX(vbox), instance->progressbar, TRUE, FALSE, 0);
   }
 
   /* lets show jobbox if its hidden */
@@ -198,7 +200,7 @@ static gboolean _destroyed_gui_thread(gpointer user_data)
 
   /* remove job widget from jobbox */
   if(params->instance->widget && GTK_IS_WIDGET(params->instance->widget))
-    gtk_container_remove(GTK_CONTAINER(params->self->widget), params->instance->widget);
+    dt_gui_container_remove(params->self->widget, params->instance->widget);
   params->instance->widget = NULL;
 
   /* if jobbox is empty let's hide */
@@ -240,8 +242,8 @@ static gboolean _cancellable_gui_thread(gpointer user_data)
   GtkBox *hbox = GTK_BOX(params->instance->hbox);
   GtkWidget *button = dtgtk_button_new(dtgtk_cairo_paint_cancel, 0, NULL);
   g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(_lib_backgroundjobs_cancel_callback_new), params->progress);
-  gtk_box_pack_start(hbox, GTK_WIDGET(button), FALSE, FALSE, 0);
-  gtk_widget_show_all(button);
+  dt_gui_box_pack_start(hbox, GTK_WIDGET(button), FALSE, FALSE, 0);
+  dt_gui_gtk_widget_show_all(button);
 
   free(params);
   return G_SOURCE_REMOVE;

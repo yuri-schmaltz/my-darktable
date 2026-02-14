@@ -1055,14 +1055,8 @@ static void _topbar_update(dt_lib_module_t *self)
 
   // first, we cleanup the filter box
   GtkWidget *fbox = dt_view_filter_get_filters_box(darktable.view_manager);
-  GList *childrens = gtk_container_get_children(GTK_CONTAINER(fbox));
-  for(GList *l = childrens; l; l = g_list_next(l))
-  {
-    g_object_ref(G_OBJECT(l->data));
-    gtk_container_remove(GTK_CONTAINER(fbox), GTK_WIDGET(l->data));
-  }
-  g_list_free(childrens);
-
+  dt_gui_container_remove_children(fbox);
+ 
   // and we add all the special widgets with a top structure
   int nb = 0;
   for(int i = 0; i < d->nb_rules; i++)
@@ -1080,7 +1074,7 @@ static void _topbar_update(dt_lib_module_t *self)
       {
         GtkWidget *evtb = gtk_event_box_new();
         GtkWidget *label = gtk_label_new(C_("quickfilter", "filter"));
-        gtk_container_add(GTK_CONTAINER(evtb), label);
+        dt_gui_set_child(evtb, label);
         g_signal_connect(G_OBJECT(evtb), "button-press-event", G_CALLBACK(_topbar_label_press), self);
         gtk_box_pack_start(GTK_BOX(fbox), evtb, TRUE, TRUE, 0);
         gtk_widget_show_all(evtb);

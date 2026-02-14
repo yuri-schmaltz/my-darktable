@@ -3854,7 +3854,7 @@ static void _lib_tagging_tag_show(dt_action_t *action)
   gtk_widget_set_name(entry, "tag-completion");
 
   gtk_editable_select_region(GTK_EDITABLE(entry), 0, -1);
-  gtk_container_add(GTK_CONTAINER(d->floating_tag_window), entry);
+  dt_gui_set_child(d->floating_tag_window, entry);
   g_signal_connect(entry, "focus-out-event",
                    G_CALLBACK(_lib_tagging_tag_destroy), d->floating_tag_window);
   g_signal_connect(entry, "key-press-event",

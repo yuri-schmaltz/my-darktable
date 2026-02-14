@@ -132,9 +132,16 @@ enum _lib_snapshot_button_items
 static GtkWidget *_lib_snapshot_button_get_item(GtkWidget *button,
                                                 const int num)
 {
+#ifdef DT_GTK4
+  GtkWidget *cont = gtk_button_get_child(GTK_BUTTON(button));
+  return dt_gui_container_nth_child(cont, num);
+#else
   GtkWidget *cont = gtk_bin_get_child(GTK_BIN(button));
   GList *items = gtk_container_get_children(GTK_CONTAINER(cont));
-  return (GtkWidget *)g_list_nth_data(items, num);
+  GtkWidget *res = (GtkWidget *)g_list_nth_data(items, num);
+  g_list_free(items);
+  return res;
+#endif
 }
 
 // draw snapshot sign
@@ -840,7 +847,8 @@ void gui_init(dt_lib_module_t *self)
     // hide entry, will be used only when editing
     gtk_widget_hide(s->entry);
 
-    gtk_container_add(GTK_CONTAINER(s->button), box);
+    GtkWidget *button_content_box = dt_gui_hbox(s->num, s->status, s->name, s->entry, (GtkWidget *)NULL);
+    dt_gui_set_child(s->button, button_content_box);
 
     // add snap button and restore button
     s->bbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);

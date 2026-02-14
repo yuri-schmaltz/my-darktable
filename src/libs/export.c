@@ -1268,7 +1268,7 @@ static void _on_storage_list_changed(gpointer instance,
     dt_bauhaus_combobox_add(d->storage, module->name(module));
     if(module->widget)
     {
-      gtk_container_add(GTK_CONTAINER(d->storage_extra_container), module->widget);
+      dt_gui_set_child(d->storage_extra_container, module->widget);
     }
   }
   dt_bauhaus_combobox_set(d->storage, dt_imageio_get_index_of_storage(storage));
@@ -1453,7 +1453,7 @@ void gui_init(dt_lib_module_t *self)
     dt_bauhaus_combobox_add(d->storage, module->name(module));
     if(module->widget)
     {
-      gtk_container_add(GTK_CONTAINER(d->storage_extra_container), module->widget);
+      dt_gui_set_child(d->storage_extra_container, module->widget);
     }
   }
 
@@ -1482,7 +1482,7 @@ void gui_init(dt_lib_module_t *self)
     const dt_imageio_module_format_t *module = it->data;
     if(module->widget)
     {
-      gtk_container_add(GTK_CONTAINER(d->format_extra_container), module->widget);
+      dt_gui_set_child(d->format_extra_container, module->widget);
     }
   }
 
@@ -1528,30 +1528,30 @@ void gui_init(dt_lib_module_t *self)
   d->print_size = gtk_flow_box_new();
   gtk_flow_box_set_max_children_per_line(GTK_FLOW_BOX(d->print_size), 5);
   gtk_flow_box_set_column_spacing (GTK_FLOW_BOX(d->print_size), 3);
-  gtk_container_add(GTK_CONTAINER(d->print_size), d->print_width);
-  gtk_container_add(GTK_CONTAINER(d->print_size), gtk_label_new(_("x")));
-  gtk_container_add(GTK_CONTAINER(d->print_size), d->print_height);
+  dt_gui_set_child(d->print_size, d->print_width);
+  dt_gui_set_child(d->print_size, gtk_label_new(_("x")));
+  dt_gui_set_child(d->print_size, d->print_height);
   d->unit_label = gtk_label_new(_("cm"));
-  gtk_container_add(GTK_CONTAINER(d->print_size), d->unit_label);
+  dt_gui_set_child(d->print_size, d->unit_label);
   GtkBox *dpi_box = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3));
   gtk_box_pack_start(dpi_box, gtk_label_new(_("@")), FALSE, FALSE, 0);
   gtk_box_pack_start(dpi_box, d->print_dpi, TRUE, TRUE, 0);
   gtk_box_pack_start(dpi_box, gtk_label_new(_("dpi")), FALSE, FALSE, 0);
-  gtk_container_add(GTK_CONTAINER(d->print_size), GTK_WIDGET(dpi_box));
-  gtk_container_foreach(GTK_CONTAINER(d->print_size),
-                        (GtkCallback)gtk_widget_set_can_focus, GINT_TO_POINTER(FALSE));
+  dt_gui_set_child(d->print_size, GTK_WIDGET(dpi_box));
+  dt_gui_container_foreach(d->print_size,
+                           (void (*)(GtkWidget *, gpointer))gtk_widget_set_can_focus, GINT_TO_POINTER(FALSE));
 
   d->px_size = gtk_flow_box_new();
   gtk_flow_box_set_max_children_per_line(GTK_FLOW_BOX(d->px_size), 3);
   gtk_flow_box_set_column_spacing (GTK_FLOW_BOX(d->px_size), 3);
-  gtk_container_add(GTK_CONTAINER(d->px_size), d->width);
-  gtk_container_add(GTK_CONTAINER(d->px_size), gtk_label_new(_("x")));
+  dt_gui_set_child(d->px_size, d->width);
+  dt_gui_set_child(d->px_size, gtk_label_new(_("x")));
   GtkBox *px_box = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3));
   gtk_box_pack_start(px_box, d->height, TRUE, TRUE, 0);
   gtk_box_pack_start(px_box, gtk_label_new(_("px")), FALSE, FALSE, 0);
-  gtk_container_add(GTK_CONTAINER(d->px_size), GTK_WIDGET(px_box));
-  gtk_container_foreach(GTK_CONTAINER(d->px_size),
-                        (GtkCallback)gtk_widget_set_can_focus, GINT_TO_POINTER(FALSE));
+  dt_gui_set_child(d->px_size, GTK_WIDGET(px_box));
+  dt_gui_container_foreach(d->px_size,
+                           (void (*)(GtkWidget *, gpointer))gtk_widget_set_can_focus, GINT_TO_POINTER(FALSE));
 
   d->scale = dt_action_entry_new
     (DT_ACTION(self), N_("scale"),

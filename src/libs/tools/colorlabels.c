@@ -135,7 +135,7 @@ void gui_init(dt_lib_module_t *self)
                     : g_strdup(_("clear color labels of selected images"));
     gtk_widget_set_tooltip_markup(button, tooltip);
     g_free(tooltip);
-    gtk_box_pack_start(GTK_BOX(self->widget), button, TRUE, TRUE, 0);
+    dt_gui_box_pack_start(GTK_BOX(self->widget), button, TRUE, TRUE, 0);
     g_signal_connect(G_OBJECT(button), "button-press-event",
                      G_CALLBACK(_lib_colorlabels_button_clicked_callback),
                      self);
@@ -240,8 +240,8 @@ static void _lib_colorlabels_edit(dt_lib_module_t *self,
     gtk_popover_set_pointing_to(GTK_POPOVER(d->floating_window), &r);
     gtk_popover_set_modal(GTK_POPOVER(d->floating_window), TRUE);
     gtk_popover_set_position(GTK_POPOVER(d->floating_window), GTK_POS_TOP);
-    gtk_container_add(GTK_CONTAINER(d->floating_window), entry);
-    gtk_widget_show_all(d->floating_window);
+    dt_gui_set_child(d->floating_window, entry);
+    dt_gui_gtk_widget_show_all(d->floating_window);
     gtk_widget_grab_focus(entry);
   }
   else
@@ -259,8 +259,8 @@ static void _lib_colorlabels_edit(dt_lib_module_t *self,
     gtk_window_set_type_hint(GTK_WINDOW(d->floating_window), GDK_WINDOW_TYPE_HINT_POPUP_MENU);
     gtk_window_set_transient_for(GTK_WINDOW(d->floating_window), GTK_WINDOW(window));
     gtk_widget_set_opacity(d->floating_window, 0.8);
-    gtk_container_add(GTK_CONTAINER(d->floating_window), entry);
-    gtk_widget_show_all(d->floating_window);
+    dt_gui_set_child(d->floating_window, entry);
+    dt_gui_gtk_widget_show_all(d->floating_window);
     gtk_window_move(GTK_WINDOW(d->floating_window), x, y);
     gtk_widget_grab_focus(entry);
     gtk_window_present(GTK_WINDOW(d->floating_window));

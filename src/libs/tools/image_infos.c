@@ -131,10 +131,10 @@ void gui_init(dt_lib_module_t *self)
   d->tview = gtk_label_new("");
   gtk_label_set_ellipsize(GTK_LABEL(d->tview), PANGO_ELLIPSIZE_MIDDLE);
   gtk_label_set_justify(GTK_LABEL(d->tview), GTK_JUSTIFY_CENTER);
-  gtk_container_add(GTK_CONTAINER(self->widget), d->tview);
+  dt_gui_set_child(self->widget, d->tview);
   gtk_widget_set_name(GTK_WIDGET(d->tview), "image-info");
 
-  gtk_widget_show_all(self->widget);
+  dt_gui_gtk_widget_show_all(self->widget);
 
   /* lets signup for develop image changed signals */
   DT_CONTROL_SIGNAL_HANDLE(DT_SIGNAL_DEVELOP_IMAGE_CHANGED, _lib_imageinfo_update_message);

@@ -409,13 +409,13 @@ void gui_init(dt_lib_module_t *self)
 
   GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
 
-  gtk_container_add(GTK_CONTAINER(d->over_popup), vbox);
+  dt_gui_set_child(d->over_popup, vbox);
 
 #define NEW_RADIO(widget, box, callback, label)                                               \
   rb = gtk_radio_button_new_with_label_from_widget(GTK_RADIO_BUTTON(rb), _(label)); \
   dt_action_define(ac, NULL, label, rb, &dt_action_def_button);                     \
   g_signal_connect(G_OBJECT(rb), "clicked", G_CALLBACK(callback), self);            \
-  gtk_box_pack_start(GTK_BOX(box), rb, TRUE, TRUE, 0);                              \
+  dt_gui_box_pack_start(GTK_BOX(box), rb, TRUE, TRUE, 0);                              \
   widget = rb;
 
   // thumbnails overlays
@@ -423,7 +423,7 @@ void gui_init(dt_lib_module_t *self)
 
   d->over_label = gtk_label_new(_("overlay mode for size"));
   dt_gui_add_class(d->over_label, "dt_section_label");
-  gtk_box_pack_start(GTK_BOX(d->thumbnails_box), d->over_label, TRUE, TRUE, 0);
+  dt_gui_box_pack_start(GTK_BOX(d->thumbnails_box), d->over_label, TRUE, TRUE, 0);
 
   dt_action_t *ac = dt_action_section(&darktable.control->actions_global, N_("thumbnail overlays"));
   GtkWidget *rb = NULL;
@@ -435,24 +435,24 @@ void gui_init(dt_lib_module_t *self)
   NEW_RADIO(d->over_r5, d->thumbnails_box, _overlays_toggle_button, N_("permanent overlays extended on mouse hover"));
   GtkWidget *hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
   NEW_RADIO(d->over_r6, hbox, _overlays_toggle_button, N_("overlays block on mouse hover"));
-  gtk_box_pack_start(GTK_BOX(hbox), gtk_label_new(_("during (s)")), FALSE, FALSE, 0);
+  dt_gui_box_pack_start(GTK_BOX(hbox), gtk_label_new(_("during (s)")), FALSE, FALSE, 0);
   d->over_timeout = gtk_spin_button_new_with_range(-1, 99, 1);
   g_signal_connect(G_OBJECT(d->over_timeout), "value-changed", G_CALLBACK(_overlays_timeout_changed), self);
-  gtk_box_pack_start(GTK_BOX(hbox), d->over_timeout, TRUE, TRUE, 0);
-  gtk_box_pack_start(GTK_BOX(d->thumbnails_box), hbox, TRUE, TRUE, 0);
+  dt_gui_box_pack_start(GTK_BOX(hbox), d->over_timeout, TRUE, TRUE, 0);
+  dt_gui_box_pack_start(GTK_BOX(d->thumbnails_box), hbox, TRUE, TRUE, 0);
   d->over_tt = gtk_check_button_new_with_label(_("show tooltip"));
   g_signal_connect(G_OBJECT(d->over_tt), "toggled", G_CALLBACK(_overlays_toggle_button), self);
   gtk_widget_set_name(d->over_tt, "show-tooltip");
-  gtk_box_pack_start(GTK_BOX(d->thumbnails_box), d->over_tt, TRUE, TRUE, 0);
+  dt_gui_box_pack_start(GTK_BOX(d->thumbnails_box), d->over_tt, TRUE, TRUE, 0);
 
-  gtk_box_pack_start(GTK_BOX(vbox), d->thumbnails_box, TRUE, TRUE, 0);
+  dt_gui_box_pack_start(GTK_BOX(vbox), d->thumbnails_box, TRUE, TRUE, 0);
 
   // culling/preview overlays
   d->culling_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
 
   d->over_culling_label = gtk_label_new(_("overlay mode for size"));
   dt_gui_add_class(d->over_culling_label, "dt_section_label");
-  gtk_box_pack_start(GTK_BOX(d->culling_box), d->over_culling_label, TRUE, TRUE, 0);
+  dt_gui_box_pack_start(GTK_BOX(d->culling_box), d->over_culling_label, TRUE, TRUE, 0);
 
   ac = dt_action_section(&darktable.control->actions_global, N_("culling overlays"));
   rb = NULL;
@@ -461,20 +461,20 @@ void gui_init(dt_lib_module_t *self)
   NEW_RADIO(d->over_culling_r4, d->culling_box, _overlays_toggle_culling_button, N_("permanent extended overlays"));
   hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
   NEW_RADIO(d->over_culling_r6, hbox, _overlays_toggle_culling_button, N_("overlays block on mouse hover"));
-  gtk_box_pack_start(GTK_BOX(hbox), gtk_label_new(_("during (s)")), FALSE, FALSE, 0);
+  dt_gui_box_pack_start(GTK_BOX(hbox), gtk_label_new(_("during (s)")), FALSE, FALSE, 0);
   d->over_culling_timeout = gtk_spin_button_new_with_range(-1, 99, 1);
   g_signal_connect(G_OBJECT(d->over_culling_timeout), "value-changed", G_CALLBACK(_overlays_timeout_changed), self);
-  gtk_box_pack_start(GTK_BOX(hbox), d->over_culling_timeout, TRUE, TRUE, 0);
-  gtk_box_pack_start(GTK_BOX(d->culling_box), hbox, TRUE, TRUE, 0);
+  dt_gui_box_pack_start(GTK_BOX(hbox), d->over_culling_timeout, TRUE, TRUE, 0);
+  dt_gui_box_pack_start(GTK_BOX(d->culling_box), hbox, TRUE, TRUE, 0);
   d->over_culling_tt = gtk_check_button_new_with_label(_("show tooltip"));
   g_signal_connect(G_OBJECT(d->over_culling_tt), "toggled", G_CALLBACK(_overlays_toggle_culling_button), self);
   gtk_widget_set_name(d->over_culling_tt, "show-tooltip");
-  gtk_box_pack_start(GTK_BOX(d->culling_box), d->over_culling_tt, TRUE, TRUE, 0);
+  dt_gui_box_pack_start(GTK_BOX(d->culling_box), d->over_culling_tt, TRUE, TRUE, 0);
 
-  gtk_box_pack_start(GTK_BOX(vbox), d->culling_box, TRUE, TRUE, 0);
+  dt_gui_box_pack_start(GTK_BOX(vbox), d->culling_box, TRUE, TRUE, 0);
 #undef NEW_RADIO
 
-  gtk_widget_show_all(vbox);
+  dt_gui_gtk_widget_show_all(vbox);
 
   /* create the widget help button */
   d->help_button = dtgtk_togglebutton_new(dtgtk_cairo_paint_help, 0, NULL);
@@ -632,7 +632,7 @@ static void _set_mapping_mode_cursor(GtkWidget *widget)
   GdkWindow *window = gtk_widget_get_window(dt_ui_main_window(darktable.gui->ui));
   GdkCursor *cursor = NULL;
 
-  if(GTK_IS_EVENT_BOX(widget)) widget = gtk_bin_get_child(GTK_BIN(widget));
+  if(GTK_IS_EVENT_BOX(widget)) widget = dt_gui_container_nth_child(widget, 0);
 
   if(widget && !strcmp(gtk_widget_get_name(widget), "module-header"))
     cursor = gdk_cursor_new_from_name(display, "context-menu");
@@ -674,7 +674,7 @@ static void _show_shortcuts_prefs(GtkWidget *w)
 
   //grab the content area of the dialog
   dt_gui_dialog_add(GTK_DIALOG(shortcuts_dialog), dt_shortcuts_prefs(w));
-  gtk_widget_show_all(shortcuts_dialog);
+  dt_gui_gtk_widget_show_all(shortcuts_dialog);
 
   gtk_dialog_run(GTK_DIALOG(shortcuts_dialog));
   gtk_widget_destroy(shortcuts_dialog);
@@ -732,7 +732,7 @@ static void _main_do_event_keymap(GdkEvent *event, gpointer data)
     else
     {
       // allow opening modules to map widgets inside
-      if(GTK_IS_EVENT_BOX(event_widget)) event_widget = gtk_bin_get_child(GTK_BIN(event_widget));
+      if(GTK_IS_EVENT_BOX(event_widget)) event_widget = dt_gui_container_nth_child(event_widget, 0);
       if(event_widget && !strcmp(gtk_widget_get_name(event_widget), "module-header"))
         break;
 

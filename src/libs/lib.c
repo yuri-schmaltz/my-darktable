@@ -1281,7 +1281,7 @@ GtkWidget *dt_lib_gui_get_expander(dt_lib_module_t *module)
   /* add module label */
   GtkWidget *label = gtk_label_new("");
   GtkWidget *label_evb = gtk_event_box_new();
-  gtk_container_add(GTK_CONTAINER(label_evb), label);
+  dt_gui_set_child(label_evb, label);
   gchar *mname = g_markup_escape_text(module->name(module), -1);
   gtk_label_set_markup(GTK_LABEL(label), mname);
   if(module->description)

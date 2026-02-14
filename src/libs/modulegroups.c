@@ -342,7 +342,7 @@ static void _basics_remove_widget(dt_lib_modulegroups_basic_item_t *item)
     if(GTK_IS_CONTAINER(item->old_parent) && gtk_widget_get_parent(item->widget) == item->box)
     {
       g_object_ref(item->widget);
-      gtk_container_remove(GTK_CONTAINER(gtk_widget_get_parent(item->widget)), item->widget);
+      dt_gui_container_remove(gtk_widget_get_parent(item->widget), item->widget);
 
       if(GTK_IS_BOX(item->old_parent))
       {
@@ -469,7 +469,7 @@ static void _basics_add_widget(dt_lib_module_t *self, dt_lib_modulegroups_basic_
       GtkWidget *lb = gtk_label_new(item->module->name());
       gtk_label_set_xalign(GTK_LABEL(lb), 0.0);
       gtk_widget_set_name(lb, "basics-iop_name");
-      gtk_container_add(GTK_CONTAINER(evb), lb);
+      dt_gui_set_child(evb, lb);
       g_signal_connect(G_OBJECT(evb), "button-press-event", G_CALLBACK(_basics_on_off_label_callback), btn);
       gtk_box_pack_start(GTK_BOX(item->box), evb, FALSE, TRUE, 0);
 
@@ -536,7 +536,7 @@ static void _basics_add_widget(dt_lib_module_t *self, dt_lib_modulegroups_basic_
 
     // we reparent the iop widget here
     g_object_ref(item->widget);
-    gtk_container_remove(GTK_CONTAINER(item->old_parent), item->widget);
+    dt_gui_container_remove(item->old_parent, item->widget);
     gtk_box_pack_start(GTK_BOX(item->box), item->widget, TRUE, TRUE, 0);
     gtk_widget_set_hexpand(item->widget, FALSE);
     g_object_unref(item->widget);
@@ -590,7 +590,7 @@ static void _basics_add_widget(dt_lib_module_t *self, dt_lib_modulegroups_basic_
     // we create the module header box
     GtkWidget *header_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     GtkWidget *evb = gtk_event_box_new();
-    gtk_container_add(GTK_CONTAINER(evb), header_box);
+    dt_gui_set_child(evb, header_box);
     gtk_widget_show_all(evb);
     g_object_set_data(G_OBJECT(evb), "module", item->module->so);
     g_signal_connect(evb, "button-press-event", G_CALLBACK(_manage_direct_module_popup), self);
@@ -670,6 +670,19 @@ static gchar *_action_id(dt_action_t *action)
     return g_strdup(action->id);
 }
 
+typedef struct _basics_add_items_from_module_widget_data_t
+{
+  dt_lib_module_t *self;
+  dt_iop_module_t *module;
+  dt_lib_modulegroups_basic_item_position_t *item_pos;
+} _basics_add_items_from_module_widget_data_t;
+
+static void _basics_add_items_from_module_widget_cb(GtkWidget *child, gpointer user_data)
+{
+  _basics_add_items_from_module_widget_data_t *data = (_basics_add_items_from_module_widget_data_t *)user_data;
+  *(data->item_pos) = _basics_add_items_from_module_widget(data->self, data->module, child, *(data->item_pos));
+}
+
 static dt_lib_modulegroups_basic_item_position_t
 _basics_add_items_from_module_widget(dt_lib_module_t *self, dt_iop_module_t *module, GtkWidget *w,
                                      dt_lib_modulegroups_basic_item_position_t item_pos)
@@ -715,12 +728,8 @@ _basics_add_items_from_module_widget(dt_lib_module_t *self, dt_iop_module_t *mod
   // if w is a container, test all subwidgets
   if(GTK_IS_CONTAINER(w))
   {
-    GList *ll = gtk_container_get_children(GTK_CONTAINER(w));
-    for(const GList *l = ll; l; l = g_list_next(l))
-    {
-      item_pos = _basics_add_items_from_module_widget(self, module, l->data, item_pos);
-    }
-    g_list_free(ll);
+    _basics_add_items_from_module_widget_data_t data = { self, module, &item_pos };
+    dt_gui_container_foreach(w, _basics_add_items_from_module_widget_cb, &data);
   }
 
   return item_pos;

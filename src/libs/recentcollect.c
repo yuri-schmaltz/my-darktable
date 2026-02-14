@@ -238,7 +238,7 @@ void _menuitem_preferences(GtkMenuItem *menuitem, dt_lib_module_t *self)
 #ifdef GDK_WINDOWING_QUARTZ
   dt_osx_disallow_fullscreen(dialog);
 #endif
-  gtk_widget_show_all(dialog);
+  dt_gui_gtk_widget_show_all(dialog);
 
   const int old_nb_items = _conf_get_max_saved_items(); // preserve previous value
 
@@ -277,7 +277,7 @@ void _menuitem_preferences(GtkMenuItem *menuitem, dt_lib_module_t *self)
         {
           d->items = g_list_append(d->items, item);
           item->button = gtk_button_new();
-          gtk_box_pack_start(GTK_BOX(box), item->button, FALSE, TRUE, 0);
+          dt_gui_box_pack_start(GTK_BOX(box), item->button, FALSE, TRUE, 0);
           g_signal_connect(G_OBJECT(item->button), "clicked", G_CALLBACK(_button_pressed), (gpointer)self);
           gtk_widget_set_no_show_all(item->button, TRUE);
           gtk_widget_set_name(GTK_WIDGET(item->button), "recent-collection-button");
@@ -321,7 +321,7 @@ void gui_init(dt_lib_module_t *self)
 
   GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
   self->widget = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-  gtk_container_add(GTK_CONTAINER(self->widget),
+  dt_gui_set_child(self->widget,
                     dt_ui_resize_wrap(box, 50, "plugins/lighttable/recentcollect/windowheight"));
   d->box = box;
   d->inited = 0;
@@ -332,7 +332,7 @@ void gui_init(dt_lib_module_t *self)
     dt_lib_recentcollect_item_t *item = malloc(sizeof(dt_lib_recentcollect_item_t));
     d->items = g_list_append(d->items, item);
     item->button = gtk_button_new();
-    gtk_box_pack_start(GTK_BOX(box), item->button, FALSE, TRUE, 0);
+    dt_gui_box_pack_start(GTK_BOX(box), item->button, FALSE, TRUE, 0);
     g_signal_connect(G_OBJECT(item->button), "clicked", G_CALLBACK(_button_pressed), (gpointer)self);
     gtk_widget_set_no_show_all(item->button, TRUE);
     dt_gui_add_class(GTK_WIDGET(item->button), "dt_transparent_background");

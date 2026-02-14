@@ -106,9 +106,9 @@ static gboolean _set_leave_unchanged(GtkTextView *textview, GtkWidget *label)
 
   gtk_widget_set_name(label, this_changed ? "dt-metadata-changed" : NULL);
 
-  gtk_container_foreach(GTK_CONTAINER(textview),
-                        (GtkCallback)gtk_widget_set_visible,
-                        GINT_TO_POINTER(leave_unchanged && !this_changed));
+  dt_gui_container_foreach(textview,
+                           (void (*)(GtkWidget *, gpointer))gtk_widget_set_visible,
+                           GINT_TO_POINTER(leave_unchanged && !this_changed));
   return this_changed;
 }
 
@@ -601,7 +601,7 @@ static void _add_grid_row(dt_metadata_t *metadata, int row, dt_lib_module_t *sel
   GtkWidget *labelev = gtk_event_box_new();
   gtk_widget_set_tooltip_text(labelev, _("double-click to reset"));
   gtk_widget_add_events(labelev, GDK_BUTTON_PRESS_MASK);
-  gtk_container_add(GTK_CONTAINER(labelev), label);
+  dt_gui_set_child(labelev, label);
   g_object_set_data(G_OBJECT(labelev), "label", label);
   gtk_grid_attach(grid, labelev, 0, row, 1, 1);
 

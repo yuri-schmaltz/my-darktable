@@ -1503,13 +1503,13 @@ static GtkWidget *_gui_init_datetime(gchar *text, dt_lib_datetime_t *dt, const i
 
   GtkWidget *t = dt_ui_label_new(text);
   gtk_size_group_add_widget(group, t);
-  gtk_container_add(GTK_CONTAINER(flow), t);
+  dt_gui_set_child(flow, t);
   gtk_widget_set_tooltip_text(flow, tip);
 
   GtkWidget *flow2 = gtk_flow_box_new();
   gtk_flow_box_set_homogeneous(GTK_FLOW_BOX(flow2), TRUE); // otherwise weird behavior
   gtk_flow_box_set_max_children_per_line(GTK_FLOW_BOX(flow2), 2);
-  gtk_container_add(GTK_CONTAINER(flow), flow2);
+  dt_gui_set_child(flow, flow2);
 
   GtkBox *box = NULL;
   for(int i = 0; i < DT_GEOTAG_PARTS_NB; i++)
@@ -1543,7 +1543,7 @@ static GtkWidget *_gui_init_datetime(gchar *text, dt_lib_datetime_t *dt, const i
     {
       gtk_widget_set_halign(GTK_WIDGET(box), GTK_ALIGN_END);
       gtk_widget_set_hexpand(GTK_WIDGET(box), TRUE);
-      gtk_container_add(GTK_CONTAINER(flow2), GTK_WIDGET(box));
+      dt_gui_set_child(flow2, GTK_WIDGET(box));
       box = NULL;
     }
     else if(i > 2 || type != 2)
@@ -1555,7 +1555,7 @@ static GtkWidget *_gui_init_datetime(gchar *text, dt_lib_datetime_t *dt, const i
     }
   }
 
-  gtk_container_foreach(GTK_CONTAINER(flow2), (GtkCallback)gtk_widget_set_can_focus, GINT_TO_POINTER(FALSE));
+  dt_gui_container_foreach(flow2, (void (*)(GtkWidget *, gpointer))gtk_widget_set_can_focus, GINT_TO_POINTER(FALSE));
 
   return flow;
 }
