@@ -537,12 +537,16 @@ void gui_reset(dt_lib_module_t *self)
   _write_metadata(self);
 }
 
-static void _menu_line_activated(GtkMenuItem *menuitem, GtkTextView *textview)
+static void _menu_line_activated(GtkWidget *menuitem, GtkTextView *textview)
 {
   GtkTextBuffer *buffer = gtk_text_view_get_buffer(textview);
+#ifdef DT_GTK4
+  gtk_text_buffer_set_text(buffer, gtk_button_get_label(GTK_BUTTON(menuitem)), -1);
+#else
   gtk_text_buffer_set_text
     (buffer,
      gtk_label_get_text(GTK_LABEL(gtk_bin_get_child(GTK_BIN(menuitem)))), -1);
+#endif
 }
 
 static void _populate_popup_multi(GtkTextView *textview,
@@ -557,15 +561,16 @@ static void _populate_popup_multi(GtkTextView *textview,
   const uint32_t key = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(textview), "key"));
   GList *texts = g_hash_table_lookup(d->metadata_texts, GINT_TO_POINTER(key));
 
-  gtk_menu_shell_append(GTK_MENU_SHELL(popup),gtk_separator_menu_item_new());
+  dt_gui_menu_shell_append(popup, dt_gui_separator_menu_item_new());
 
   for(GList *item = texts; item; item = item->next)
   {
-    GtkWidget *new_line = gtk_menu_item_new_with_label(item->data);
-    g_signal_connect(G_OBJECT(new_line), "activate", G_CALLBACK(_menu_line_activated), textview);
-    gtk_menu_shell_append(GTK_MENU_SHELL(popup), new_line);
+    GtkWidget *new_line = dt_gui_menu_item_new(item->data, G_CALLBACK(_menu_line_activated), textview);
+    dt_gui_menu_shell_append(popup, new_line);
   }
+#ifndef DT_GTK4
   gtk_widget_show_all(popup);
+#endif
 }
 
 static gboolean _metadata_reset(GtkWidget *label,
@@ -751,13 +756,21 @@ static void _add_tag_button_clicked(GtkButton *button, dt_lib_metadata_t *d)
   dt_osx_disallow_fullscreen(dialog);
 #endif
 
+#ifdef DT_GTK4
+  gtk_widget_show(dialog);
+#else
   gtk_widget_show_all(dialog);
-  while(gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT)
+#endif
+  while(dt_gui_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT)
   {
     gchar *tagname = dt_metadata_tags_get_selected();
     _add_selected_metadata(tagname, d);
   }
+#ifdef DT_GTK4
+  gtk_window_destroy(GTK_WINDOW(dialog));
+#else
   gtk_widget_destroy(dialog);
+#endif
 }
 
 static void _delete_tag_button_clicked(GtkButton *button, dt_lib_metadata_t *d)
@@ -945,11 +958,15 @@ static void _menuitem_preferences(GtkMenuItem *menuitem,
   dt_osx_disallow_fullscreen(dialog);
 #endif
   dt_gui_dialog_add(GTK_DIALOG(dialog), w, dt_gui_hbox(dt_gui_expand(dt_gui_align_right(minus)), plus));
+#ifdef DT_GTK4
+  gtk_widget_show(dialog);
+#else
   gtk_widget_show_all(dialog);
+#endif
 
   d->needs_rebuild = FALSE;
 
-  int res = gtk_dialog_run(GTK_DIALOG(dialog));
+  int res = dt_gui_dialog_run(GTK_DIALOG(dialog));
 
   if(res == GTK_RESPONSE_ACCEPT)
   {
@@ -1115,14 +1132,17 @@ static void _menuitem_preferences(GtkMenuItem *menuitem,
   }
 
 finish:
+#ifdef DT_GTK4
+  gtk_window_destroy(GTK_WINDOW(dialog));
+#else
   gtk_widget_destroy(dialog);
+#endif
 }
 
-void set_preferences(void *menu, dt_lib_module_t *self)
+void set_preferences(GtkWidget *menu, dt_lib_module_t *self)
 {
-  GtkWidget *mi = gtk_menu_item_new_with_label(_("preferences..."));
-  g_signal_connect(G_OBJECT(mi), "activate", G_CALLBACK(_menuitem_preferences), self);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), mi);
+  GtkWidget *mi = dt_gui_menu_item_new(_("preferences..."), G_CALLBACK(_menuitem_preferences), self);
+  dt_gui_menu_shell_append(menu, mi);
 }
 
 void gui_init(dt_lib_module_t *self)

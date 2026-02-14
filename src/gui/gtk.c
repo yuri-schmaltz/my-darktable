@@ -2529,13 +2529,12 @@ static void _toggle_module_visibility(GtkMenuItem *menuitem,
 static void _add_remove_modules(dt_action_t *action)
 {
   const dt_view_type_flags_t cv = dt_view_get_current();
-  GtkWidget *menu = gtk_menu_new();
+  GtkWidget *menu = dt_gui_menu_new();
 
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
-  GtkWidget *mi = gtk_menu_item_new_with_label(_("restore defaults"));
+  dt_gui_menu_shell_append(menu, dt_gui_separator_menu_item_new());
+  GtkWidget *mi = dt_gui_menu_item_new(_("restore defaults"), G_CALLBACK(_restore_default_modules), NULL);
   gtk_widget_set_tooltip_text(mi, _("restore the default visibility and position of all modules in this view"));
-  g_signal_connect(mi, "activate", G_CALLBACK(_restore_default_modules), NULL);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), mi);
+  dt_gui_menu_shell_append(menu, mi);
 
   for(const GList *iter = darktable.lib->plugins; iter; iter = iter->next)
   {
@@ -2545,15 +2544,15 @@ static void _add_remove_modules(dt_action_t *action)
     if((mv & cv || mv & (mv - 1) || mv & DT_VIEW_MULTI) // either current view or supports more than one view
        && module->expandable(module))
     {
+      // TODO: shim for check menu item if needed, for now use direct but it's legacy
       mi = gtk_check_menu_item_new_with_label(module->name(module));
       gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(mi), dt_lib_is_visible(module));
       g_signal_connect(mi, "toggled", G_CALLBACK(_toggle_module_visibility), module);
-      gtk_menu_shell_prepend(GTK_MENU_SHELL(menu), mi);
+      dt_gui_menu_shell_append(menu, mi);
     }
   }
 
-  gtk_widget_show_all(menu);
-  dt_gui_menu_popup(GTK_MENU(menu), NULL, 0, 0);
+  dt_gui_menu_popup(menu, action->widget, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
 }
 
 static gboolean _side_panel_press(GtkWidget *widget,

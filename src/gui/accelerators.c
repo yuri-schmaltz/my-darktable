@@ -2804,12 +2804,21 @@ static void _import_extended_clicked(GtkButton *button, gpointer user_data)
                                      "shortcuts before adding these.\n"));
   gtk_widget_set_halign(label, GTK_ALIGN_START);
   dt_gui_dialog_add(GTK_DIALOG(dialog), label);
+#ifdef DT_GTK4
+  gtk_widget_show(dialog);
+#else
   gtk_widget_show_all(dialog);
+#endif
 
-  const int resp = gtk_dialog_run(GTK_DIALOG(dialog));
+  int res = dt_gui_dialog_run(GTK_DIALOG(dialog));
+
+#ifdef DT_GTK4
+  gtk_window_destroy(GTK_WINDOW(dialog));
+#else
   gtk_widget_destroy(dialog);
+#endif
 
-  if(resp == GTK_RESPONSE_OK)
+  if(res == GTK_RESPONSE_OK)
   {
     // user asked to import the darktable system shortcuts file (localized, if available)
     char sharedir[PATH_MAX] = { 0 };

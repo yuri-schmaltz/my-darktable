@@ -38,7 +38,13 @@ typedef struct _workspace_t {
 static void _workspace_screen_destroy(dt_workspace_t *session)
 {
   if(session->db_screen)
+  {
+#ifdef DT_GTK4
+    gtk_window_destroy(GTK_WINDOW(session->db_screen));
+#else
     gtk_widget_destroy(session->db_screen);
+#endif
+  }
   session->db_screen = NULL;
 }
 
@@ -243,8 +249,17 @@ gboolean dt_workspace_create(const char *datadir)
   GtkWidget *content = gtk_dialog_get_content_area(GTK_DIALOG(session->db_screen));
   gtk_widget_set_name(content, "workspace");
 
+#ifdef DT_GTK4
+  gtk_widget_show(session->db_screen);
+#else
   gtk_widget_show_all(session->db_screen);
-  while(gtk_dialog_run(GTK_DIALOG(session->db_screen)) == GTK_RESPONSE_ACCEPT);
+#endif
+
+  while(1)
+  {
+    const int res = dt_gui_dialog_run(GTK_DIALOG(session->db_screen));
+    if(res != GTK_RESPONSE_ACCEPT) break;
+  }
 
   _workspace_screen_destroy(session);
   g_free(session);

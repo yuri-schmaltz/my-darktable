@@ -104,13 +104,21 @@ static void _add_tag_button_clicked(GtkButton *button, dt_lib_export_metadata_t 
   dt_osx_disallow_fullscreen(dialog);
 #endif
 
+#ifdef DT_GTK4
+  gtk_widget_show(dialog);
+#else
   gtk_widget_show_all(dialog);
-  while(gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT)
+#endif
+  while(dt_gui_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT)
   {
     gchar *tagname = dt_metadata_tags_get_selected();
     _add_selected_metadata(tagname, d);
   }
+#ifdef DT_GTK4
+  gtk_window_destroy(GTK_WINDOW(dialog));
+#else
   gtk_widget_destroy(dialog);
+#endif
 }
 
 static void _remove_tag_from_list(dt_lib_export_metadata_t *d)
@@ -299,10 +307,14 @@ char *dt_lib_export_metadata_configuration_dialog(char *metadata_presets, const 
                     dt_gui_vbox(gtk_label_new(_("per metadata settings")),
                                 dt_gui_scroll_wrap(GTK_WIDGET(view)),
                                 dt_gui_hbox(dt_gui_expand(dt_gui_align_right(minus)), plus))));
+#ifdef DT_GTK4
+  gtk_widget_show(dialog);
+#else
   gtk_widget_show_all(dialog);
+#endif
 
   char *newlist = metadata_presets;
-  if(gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT)
+  if(dt_gui_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT)
   {
     if(active_editable)
       gtk_cell_editable_editing_done(active_editable);

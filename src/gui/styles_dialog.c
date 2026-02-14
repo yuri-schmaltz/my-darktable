@@ -858,17 +858,18 @@ static gboolean _gui_styles_dialog_run(const gboolean edit,
   else
     g_signal_connect(dialog, "response", G_CALLBACK(_gui_styles_new_style_response), sd);
 
+#ifdef DT_GTK4
+  gtk_widget_show(GTK_WIDGET(dialog));
+#else
   gtk_widget_show_all(GTK_WIDGET(dialog));
+#endif
+  const int res = dt_gui_dialog_run(GTK_DIALOG(dialog));
 
-  gint dr = GTK_RESPONSE_YES;
-  while(dr == GTK_RESPONSE_YES || dr == GTK_RESPONSE_NONE)
-  {
-    dr = gtk_dialog_run(GTK_DIALOG(dialog));
-  }
-
-  const gboolean res = !sd->cancelled;
-
+#ifdef DT_GTK4
+  gtk_window_destroy(GTK_WINDOW(dialog));
+#else
   gtk_widget_destroy(GTK_WIDGET(dialog));
+#endif
   g_object_unref(is_active_pb);
   g_object_unref(is_inactive_pb);
   g_free(sd);

@@ -617,19 +617,28 @@ void dt_gui_preferences_show()
   if(strcmp(current_view, _("darkroom")) == 0
      || strcmp(current_view, _("lighttable")) == 0)
   {
-    gtk_stack_set_visible_child(GTK_STACK(stack),
+  gtk_stack_set_visible_child(GTK_STACK(stack),
                                 gtk_stack_get_child_by_name(GTK_STACK(stack),
                                                             current_view));
   }
 
-  (void)gtk_dialog_run(GTK_DIALOG(_preferences_dialog));
+  while(1)
+  {
+    const int resp = dt_gui_dialog_run(GTK_DIALOG(_preferences_dialog));
+    if(resp == GTK_RESPONSE_CLOSE || resp == GTK_RESPONSE_DELETE_EVENT) break;
+  }
 
 #ifdef USE_LUA
   destroy_tab_lua(lua_grid);
 #endif
 
   free(tweak_widgets);
-  gtk_widget_destroy(_preferences_dialog);
+#ifdef DT_GTK4
+  gtk_window_destroy(GTK_WINDOW(_preferences_dialog));
+#else
+  gtk_widget_destroy(GTK_WIDGET(_preferences_dialog));
+#endif
+  _preferences_dialog = NULL;
 
   if(restart_required)
     dt_control_log(_("darktable needs to be restarted for settings to take effect"));
