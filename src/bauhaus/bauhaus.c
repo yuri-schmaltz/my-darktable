@@ -3287,7 +3287,7 @@ static gboolean _widget_scroll(GtkWidget *widget,
   return TRUE; // Ensure that scrolling the combobox cannot move side panel
 }
 
-static gboolean _widget_key_press(GtkWidget *widget, GdkEventKey *event)
+static G_GNUC_UNUSED gboolean _widget_key_press(GtkWidget *widget, GdkEventKey *event)
 {
   dt_bauhaus_widget_t *w = (dt_bauhaus_widget_t *)widget;
 
@@ -3627,11 +3627,39 @@ static gboolean _popup_key_press(GtkWidget *widget,
 {
   guint keyval = event->keyval;
   GdkModifierType state = event->state;
+  (void)state;
 #endif
   dt_bauhaus_t *bh = darktable.bauhaus;
   dt_bauhaus_widget_t *w = bh->current;
   const gboolean is_combo = w->type == DT_BAUHAUS_COMBOBOX;
   int delta = -1;
+
+  switch(keyval)
+  {
+    case GDK_KEY_Escape:
+      _popup_hide();
+      return TRUE;
+    case GDK_KEY_Return:
+    case GDK_KEY_KP_Enter:
+      _popup_hide();
+      return TRUE;
+    case GDK_KEY_Up:
+    case GDK_KEY_KP_Up:
+      delta = 1;
+      goto move;
+    case GDK_KEY_Down:
+    case GDK_KEY_KP_Down:
+      delta = -1;
+      goto move;
+    move:
+      if(is_combo)
+      {
+        int active = dt_bauhaus_combobox_get(GTK_WIDGET(w));
+        dt_bauhaus_combobox_set(GTK_WIDGET(w), active + delta);
+      }
+      else
+        dt_bauhaus_slider_set_step(GTK_WIDGET(w), delta);
+      break;
 
     default:
     {

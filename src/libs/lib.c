@@ -598,7 +598,7 @@ static void dt_lib_presets_popup_menu_show(dt_lib_module_info_t *minfo,
     minfo->module->set_preferences(GTK_MENU_SHELL(menu), minfo->module);
   }
 
-  dt_gui_menu_popup(menu, w, GDK_GRAVITY_SOUTH_EAST, GDK_GRAVITY_NORTH_EAST);
+  dt_gui_menu_popup(GTK_WIDGET(menu), w, GDK_GRAVITY_SOUTH_EAST, GDK_GRAVITY_NORTH_EAST);
 }
 
 static int _lib_position(const dt_lib_module_t *module)

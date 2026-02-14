@@ -925,7 +925,7 @@ static gboolean _rule_show_popup(GtkWidget *widget, dt_lib_filtering_rule_t *rul
   ADD_COLLECT_ENTRY(spop, DT_COLLECTION_PROP_MODULE);
   ADD_COLLECT_ENTRY(spop, DT_COLLECTION_PROP_ORDER);
 
-  dt_gui_menu_popup(GTK_MENU(spop), widget, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
+  dt_gui_menu_popup(GTK_WIDGET(spop), widget, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
   return TRUE;
 #undef ADD_COLLECT_ENTRY
 }
@@ -1574,7 +1574,7 @@ static void _event_history_show(GtkWidget *widget, dt_lib_module_t *self)
     }
   }
 
-  dt_gui_menu_popup(GTK_MENU(pop), widget, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
+  dt_gui_menu_popup(GTK_WIDGET(pop), widget, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
 }
 
 static void _topbar_populate_prop_combo_add(GtkWidget *w, const dt_collection_properties_t prop,
@@ -2065,7 +2065,7 @@ static void _sort_show_add_popup(GtkWidget *widget, dt_lib_module_t *self)
   for(const dt_introspection_type_enum_tuple_t *list = _collection_sort_names; list->name; list++)
     _popup_add_item(spop, Q_(list->name), list->value, FALSE, G_CALLBACK(_sort_append_sort), NULL, self, 0.0);
 
-  dt_gui_menu_popup(GTK_MENU(spop), widget, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
+  dt_gui_menu_popup(GTK_WIDGET(spop), widget, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
 #undef ADD_SORT_ENTRY
 
 }
@@ -2159,7 +2159,7 @@ static void _sort_history_show(GtkWidget *widget, dt_lib_module_t *self)
     }
   }
 
-  dt_gui_menu_popup(GTK_MENU(pop), widget, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
+  dt_gui_menu_popup(GTK_WIDGET(pop), widget, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
 }
 
 void gui_init(dt_lib_module_t *self)

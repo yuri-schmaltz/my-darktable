@@ -1135,7 +1135,7 @@ static void _popup_show(GtkDarktableRangeSelect *range, GtkWidget *w)
   if(range->type == DT_RANGE_TYPE_NUMERIC)
   {
     GtkWidget *pop = _popup_get_numeric_menu(range, w);
-    dt_gui_menu_popup(GTK_MENU(pop), NULL, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
+    dt_gui_menu_popup(pop, NULL, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
   }
   else if(range->type == DT_RANGE_TYPE_DATETIME)
   {

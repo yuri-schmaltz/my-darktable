@@ -1139,7 +1139,7 @@ finish:
 #endif
 }
 
-void set_preferences(GtkWidget *menu, dt_lib_module_t *self)
+void set_preferences(void *menu, dt_lib_module_t *self)
 {
   GtkWidget *mi = dt_gui_menu_item_new(_("preferences..."), G_CALLBACK(_menuitem_preferences), self);
   dt_gui_menu_shell_append(menu, mi);

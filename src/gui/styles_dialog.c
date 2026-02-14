@@ -917,6 +917,7 @@ static gboolean _preview_draw(GtkWidget *widget, cairo_t *cr, gpointer user_data
 GtkWidget *dt_gui_style_content_dialog(char *name, const dt_imgid_t imgid)
 {
   static _preview_data_t data = { "", -1, FALSE, NULL, NULL, 0, 0};
+  const gboolean edit = FALSE;
 
   dt_history_hash_values_t hash = { NULL, 0, NULL, 0, NULL, 0 };
   dt_history_hash_read(imgid, &hash);

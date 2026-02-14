@@ -183,6 +183,9 @@ static gboolean _lib_modulegroups_test_visible(dt_lib_module_t *self, gchar *mod
 */
 static void _lib_modulegroups_switch_group(dt_lib_module_t *self, dt_iop_module_t *module);
 
+static dt_lib_modulegroups_basic_item_position_t
+_basics_add_items_from_module_widget(dt_lib_module_t *self, dt_iop_module_t *module, GtkWidget *w,
+                                     dt_lib_modulegroups_basic_item_position_t item_pos);
 static void _manage_preset_update_list(dt_lib_module_t *self);
 static void _manage_editor_load(const char *preset, dt_lib_module_t *self);
 
@@ -2431,7 +2434,7 @@ static void _manage_module_add_popup(GtkWidget *widget,
     gtk_menu_shell_prepend(GTK_MENU_SHELL(pop), smt);
   }
 
-  dt_gui_menu_popup(GTK_MENU(pop), widget, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
+  dt_gui_menu_popup(GTK_WIDGET(pop), widget, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
 }
 
 static gchar *_action_label(dt_action_t *action)
@@ -2644,7 +2647,7 @@ static void _manage_basics_add_popup(GtkWidget *widget,
     pop = all_modules;
   }
 
-  dt_gui_menu_popup(GTK_MENU(pop), widget, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
+  dt_gui_menu_popup(GTK_WIDGET(pop), widget, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
 }
 
 static void _manage_editor_basics_add_popup(GtkWidget *widget,
@@ -2715,7 +2718,7 @@ static gboolean _manage_direct_module_popup(GtkWidget *widget,
     GtkWidget *this_module = _build_menu_from_actions(module->target, self,
                                                       NULL, pop, TRUE, &nba);
 
-    dt_gui_menu_popup(GTK_MENU(this_module), NULL, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
+    dt_gui_menu_popup(GTK_WIDGET(this_module), NULL, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
 
     return TRUE;
   }
@@ -2754,7 +2757,7 @@ static gboolean _manage_direct_active_popup(GtkWidget *widget,
                      G_CALLBACK(_manage_direct_full_active_toggled), self);
     gtk_menu_shell_append(GTK_MENU_SHELL(pop), smt);
 
-    dt_gui_menu_popup(GTK_MENU(pop), widget, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
+    dt_gui_menu_popup(GTK_WIDGET(pop), widget, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
     return TRUE;
   }
   return FALSE;

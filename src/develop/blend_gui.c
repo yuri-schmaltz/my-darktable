@@ -2100,8 +2100,9 @@ static void _blendif_options_callback(GtkButton *button,
     }
   }
 
-  dt_gui_menu_popup(menu,
-                    GTK_WIDGET(button), GDK_GRAVITY_SOUTH_EAST, GDK_GRAVITY_NORTH_EAST);
+  dt_gui_menu_popup(GTK_WIDGET(menu),
+                    GTK_WIDGET(button),
+                    GDK_GRAVITY_SOUTH_WEST, GDK_GRAVITY_NORTH_WEST);
 
   dtgtk_button_set_active(DTGTK_BUTTON(button), FALSE);
 }

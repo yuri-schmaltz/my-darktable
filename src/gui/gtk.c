@@ -147,18 +147,6 @@ static void _ui_widget_redraw_callback(gpointer instance, GtkWidget *widget);
 static void _ui_log_redraw_callback(gpointer instance, GtkWidget *widget);
 static void _ui_toast_redraw_callback(gpointer instance, GtkWidget *widget);
 
-// set class function to add CSS classes with just a simple line call
-void dt_gui_add_class(GtkWidget *widget, const gchar *class_name)
-{
-  GtkStyleContext *context = gtk_widget_get_style_context(widget);
-  gtk_style_context_add_class(context, class_name);
-}
-
-void dt_gui_remove_class(GtkWidget *widget, const gchar *class_name)
-{
-  GtkStyleContext *context = gtk_widget_get_style_context(widget);
-  gtk_style_context_remove_class(context, class_name);
-}
 
 /*
  * OLD UI API
@@ -2434,6 +2422,7 @@ static gboolean _on_drag_motion_drop(GtkDropTarget *target, double x, double y, 
 static gboolean _on_drag_motion_drop(GtkWidget *empty, GdkDragContext *dc, const gint x, const gint y, const guint time, const gboolean drop)
 {
 #endif
+  gboolean ret = FALSE;
   GtkWidget *widget = gtk_widget_get_parent(empty);
   GList *list = gtk_container_get_children(GTK_CONTAINER(widget));
   GList *last = g_list_last(list);
@@ -2466,39 +2455,38 @@ static gboolean _on_drag_motion_drop(GtkWidget *empty, GdkDragContext *dc, const
     }
   }
   g_list_free(list);
-  return TRUE;
+
+#ifndef DT_GTK4
+  if(ret)
+  {
+    if(dt_view_get_current() == DT_VIEW_DARKROOM)
+      gdk_drag_status(dc, 0, time); // don't allow dropping in empty panel on other side
+    else if(drop)
+    {
+      // drop in empty panel; dragged expander handles its own move; pass destination panel in dc
+      GtkWidget *src_expander = gtk_widget_get_ancestor
+        (gtk_drag_get_source_widget(dc), DTGTK_TYPE_EXPANDER);
+      if(src_expander)
+        g_signal_emit_by_name(src_expander, "drag-motion", empty, x, y, time, &ret);
+    }
+    else
+      gdk_drag_status(dc, GDK_ACTION_COPY, time);
+  }
+#endif
+
+  return ret;
 }
 
 #ifdef DT_GTK4
 static void _on_drag_leave(GtkDropTarget *target, gpointer user_data)
 {
-  // GtkWidget *empty = gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(target));
 }
 #else
 static void _on_drag_leave(GtkWidget *widget, GdkDragContext *dc, const guint time, gpointer user_data)
 {
-}
-#endif
-  else if(dt_view_get_current() == DT_VIEW_DARKROOM)
-    gdk_drag_status(dc, 0, time); // don't allow dropping in empty panel on other side
-  else if(drop)
-  {
-    // drop in empty panel; dragged expander handles its own move; pass destination panel in dc
-    GtkWidget *src_expander = gtk_widget_get_ancestor
-      (gtk_drag_get_source_widget(dc), DTGTK_TYPE_EXPANDER);
-    if(src_expander)
-      g_signal_emit_by_name(src_expander, "drag-motion", widget, x, y, time, &ret);
-  }
-  else
-    gdk_drag_status(dc, GDK_ACTION_COPY, time);
-
-  return ret;
-}
-
-static void _on_drag_leave(GtkWidget *widget, GdkDragContext *dc, const guint time, gpointer user_data)
-{
   dtgtk_expander_set_drag_hover(NULL, FALSE, FALSE, time);
 }
+#endif
 
 static gboolean _remove_modules_visibility(const gpointer key,
                                            gpointer value,
@@ -2552,7 +2540,7 @@ static void _add_remove_modules(dt_action_t *action)
     }
   }
 
-  dt_gui_menu_popup(menu, action->widget, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
+  dt_gui_menu_popup(GTK_WIDGET(menu), action ? GTK_WIDGET(action->target) : NULL, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
 }
 
 static gboolean _side_panel_press(GtkWidget *widget,
@@ -3994,6 +3982,58 @@ const gchar *dt_action_effect_tabs[]
 static GtkNotebook *_current_notebook = NULL;
 static dt_action_def_t *_current_action_def = NULL;
 
+#ifdef DT_GTK4
+static void _notebook_scroll_callback(GtkEventControllerScroll *controller, double dx, double dy,
+                                      gpointer user_data)
+{
+  GtkWidget *widget = gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(controller));
+  const GdkModifierType state = gtk_event_controller_get_current_event_state(GTK_EVENT_CONTROLLER(controller));
+  _action_process_tabs(widget, DT_ACTION_EFFECT_DEFAULT_KEY,
+                       dy < 0
+                       ? DT_ACTION_EFFECT_NEXT
+                       : DT_ACTION_EFFECT_PREVIOUS, (int)dy);
+}
+#else
+static gboolean _notebook_scroll_callback(GtkNotebook *notebook,
+                                          GdkEventScroll *event,
+                                          gpointer user_data)
+{
+  if(dt_gui_ignore_scroll(event)) return FALSE;
+
+  int delta = 0;
+  if(dt_gui_get_scroll_unit_delta(event, &delta) && delta)
+    _action_process_tabs(GTK_WIDGET(notebook), DT_ACTION_EFFECT_DEFAULT_KEY,
+                         delta > 0
+                         ? DT_ACTION_EFFECT_NEXT
+                         : DT_ACTION_EFFECT_PREVIOUS, abs(delta));
+  return TRUE;
+}
+#endif
+
+#ifdef DT_GTK4
+static void _notebook_button_press_callback(GtkGestureClick *gesture, int n_press, double x, double y,
+                                            gpointer user_data)
+{
+  GtkNotebook *notebook = GTK_NOTEBOOK(user_data);
+  GdkEvent *event = gtk_gesture_get_last_event(GTK_GESTURE(gesture), NULL);
+  if(gdk_event_get_button(event) == GDK_BUTTON_SECONDARY)
+  {
+    // TODO: show tab menu
+  }
+}
+#else
+static gboolean _notebook_button_press_callback(GtkNotebook *notebook,
+                                                GdkEventButton *event,
+                                                gpointer user_data)
+{
+  if(event->button == GDK_BUTTON_SECONDARY)
+  {
+    // TODO: show tab menu
+  }
+  return FALSE;
+}
+#endif
+
 GtkNotebook *dt_ui_notebook_new(dt_action_def_t *def)
 {
   _current_notebook = GTK_NOTEBOOK(gtk_notebook_new());
@@ -4019,55 +4059,6 @@ GtkNotebook *dt_ui_notebook_new(dt_action_def_t *def)
 #endif
   return _current_notebook;
 }
-
-#ifdef DT_GTK4
-static void _notebook_scroll_callback(GtkEventControllerScroll *controller, double dx, double dy,
-                                      gpointer user_data)
-{
-  GtkWidget *widget = gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(controller));
-  const GdkModifierType state = gtk_event_controller_get_current_event_state(GTK_EVENT_CONTROLLER(controller));
-  _action_process_tabs(widget, DT_ACTION_EFFECT_DEFAULT_KEY,
-                       dy < 0
-                       ? DT_ACTION_EFFECT_NEXT
-                       : DT_ACTION_EFFECT_PREVIOUS, (int)dy);
-}
-#else
-static gboolean _notebook_scroll_callback(GtkNotebook *notebook,
-                                          GdkEventScroll *event,
-                                          gpointer user_data)
-{
-  if(dt_gui_ignore_scroll(event)) return FALSE;
-
-  int delta = 0;
-  if(dt_gui_get_scroll_unit_delta(event, &delta) && delta)
-    _action_process_tabs(notebook, DT_ACTION_EFFECT_DEFAULT_KEY,
-                         delta < 0
-                         ? DT_ACTION_EFFECT_NEXT
-                         : DT_ACTION_EFFECT_PREVIOUS, delta);
-
-  return TRUE;
-}
-#endif
-
-#ifdef DT_GTK4
-static void _notebook_button_press_callback(GtkGestureClick *gesture, int n_press, double x, double y,
-                                            gpointer user_data)
-{
-  GtkNotebook *notebook = GTK_NOTEBOOK(user_data);
-  if(n_press == 2)
-    _reset_all_bauhaus(notebook, gtk_notebook_get_nth_page(notebook, gtk_notebook_get_current_page(notebook)));
-}
-#else
-static gboolean _notebook_button_press_callback(GtkNotebook *notebook,
-                                                const GdkEventButton *event,
-                                                gpointer user_data)
-{
-  if(event->type == GDK_2BUTTON_PRESS && gtk_get_event_widget((GdkEvent*)event) == GTK_WIDGET(notebook))
-    _reset_all_bauhaus(notebook, gtk_notebook_get_nth_page(notebook, gtk_notebook_get_current_page(notebook)));
-
-  return FALSE;
-}
-#endif
 
 GtkWidget *dt_ui_notebook_page(GtkNotebook *notebook,
                                const char *text,
@@ -4673,20 +4664,29 @@ void dt_gui_menu_shell_append(GtkWidget *menu, GtkWidget *item)
   }
 }
 
+void dt_gui_menu_item_set_submenu(GtkWidget *item, GtkWidget *menu)
+{
+  if(GTK_IS_BUTTON(item) && GTK_IS_POPOVER(menu))
+  {
+    gtk_popover_set_relative_to(GTK_POPOVER(menu), item);
+    g_signal_connect_swapped(G_OBJECT(item), "clicked", G_CALLBACK(gtk_popover_popup), menu);
+  }
+}
+
 #else
-void dt_gui_menu_popup(GtkMenu *menu,
+void dt_gui_menu_popup(GtkWidget *menu,
                        GtkWidget *button,
                        const GdkGravity widget_anchor,
                        const GdkGravity menu_anchor)
 {
-  gtk_widget_show_all(GTK_WIDGET(menu));
+  gtk_widget_show_all(menu);
   g_object_ref_sink(G_OBJECT(menu));
   g_signal_connect(G_OBJECT(menu), "deactivate", G_CALLBACK(g_object_unref), NULL);
 
   GdkEvent *event = gtk_get_current_event();
   if(button && event)
   {
-    gtk_menu_popup_at_widget(menu, button, widget_anchor, menu_anchor, event);
+    gtk_menu_popup_at_widget(GTK_MENU(menu), button, widget_anchor, menu_anchor, event);
   }
   else
   {
@@ -4700,7 +4700,7 @@ void dt_gui_menu_popup(GtkMenu *menu,
       g_object_ref(event->button.window);
     }
 
-    gtk_menu_popup_at_pointer(menu, event);
+    gtk_menu_popup_at_pointer(GTK_MENU(menu), event);
   }
   gdk_event_free(event);
 }
@@ -5101,15 +5101,15 @@ void dt_gui_connect_drag_dest(GtkWidget *widget, GCallback motion_cb, GCallback 
 {
 #ifdef DT_GTK4
   GtkDropTarget *target = gtk_drop_target_new(G_TYPE_INVALID, GDK_ACTION_COPY);
-  if(motion_cb) g_signal_connect(target, "motion", motion_cb, user_data);
-  if(drop_cb) g_signal_connect(target, "drop", drop_cb, user_data);
-  if(leave_cb) g_signal_connect(target, "leave", leave_cb, user_data);
+  if(motion_cb) g_signal_connect_data(target, "motion", motion_cb, user_data, NULL, 0);
+  if(drop_cb) g_signal_connect_data(target, "drop", drop_cb, user_data, NULL, 0);
+  if(leave_cb) g_signal_connect_data(target, "leave", leave_cb, user_data, NULL, 0);
   gtk_widget_add_controller(widget, GTK_EVENT_CONTROLLER(target));
 #else
   gtk_drag_dest_set(widget, 0, NULL, 0, GDK_ACTION_COPY);
-  if(motion_cb) g_signal_connect(widget, "drag-motion", motion_cb, user_data);
-  if(drop_cb) g_signal_connect(widget, "drag-drop", drop_cb, user_data);
-  if(leave_cb) g_signal_connect(widget, "drag-leave", leave_cb, user_data);
+  if(motion_cb) g_signal_connect_data(widget, "drag-motion", motion_cb, user_data, NULL, 0);
+  if(drop_cb) g_signal_connect_data(widget, "drag-drop", drop_cb, user_data, NULL, 0);
+  if(leave_cb) g_signal_connect_data(widget, "drag-leave", leave_cb, user_data, NULL, 0);
 #endif
 }
 
@@ -5166,9 +5166,11 @@ GtkWidget *(dt_gui_box_add)(const char *file, const int line, const char *functi
   return GTK_WIDGET(box);
 }
 
-#ifdef DT_GTK4
-void dt_gui_container_remove(GtkWidget *container, GtkWidget *widget)
+void dt_gui_container_remove(void *_container, void *_child)
 {
+  GtkWidget *container = (GtkWidget *)_container;
+  GtkWidget *widget = (GtkWidget *)_child;
+#ifdef DT_GTK4
   if(GTK_IS_BOX(container))
     gtk_box_remove(GTK_BOX(container), widget);
   else if(GTK_IS_WINDOW(container))
@@ -5181,8 +5183,11 @@ void dt_gui_container_remove(GtkWidget *container, GtkWidget *widget)
     gtk_viewport_set_child(GTK_VIEWPORT(container), NULL);
   else
     dt_print(DT_DEBUG_ALWAYS, "dt_gui_container_remove: unknown container type %s", G_OBJECT_TYPE_NAME(container));
-}
+#else
+  if(GTK_IS_CONTAINER(container))
+    (gtk_container_remove)(GTK_CONTAINER(container), widget);
 #endif
+}
 
 static gboolean _focus_out_commit(GtkCellEditable *editable,
                                   GdkEvent *event,

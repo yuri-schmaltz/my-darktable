@@ -3597,7 +3597,7 @@ static void _history_show(GtkWidget *widget,
       break;
   }
 
-  dt_gui_menu_popup(GTK_MENU(pop), widget, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
+  dt_gui_menu_popup(GTK_WIDGET(pop), widget, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
 }
 
 static void _history_previous(dt_action_t *action)

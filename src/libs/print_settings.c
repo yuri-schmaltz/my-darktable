@@ -1229,7 +1229,7 @@ static void _style_popupmenu_callback(GtkWidget *w, gpointer user_data)
                                                         user_data);
   if(menu)
   {
-    dt_gui_menu_popup(GTK_MENU(menu), w, GDK_GRAVITY_SOUTH_WEST, GDK_GRAVITY_NORTH_WEST);
+    dt_gui_menu_popup(GTK_WIDGET(menu), w, GDK_GRAVITY_SOUTH_WEST, GDK_GRAVITY_NORTH_WEST);
   }
   else
     dt_control_log(_("no styles have been created yet"));

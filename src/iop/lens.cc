@@ -3860,7 +3860,7 @@ static void _camera_menusearch_clicked(GtkWidget *button, dt_iop_module_t *self)
   GtkMenu *menu = camera_menu_fill(self, camlist);
 
   // dt_gui_menu_popup unrefs the menu
-  dt_gui_menu_popup(menu, button, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
+  dt_gui_menu_popup(GTK_WIDGET(menu), button, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
 }
 
 static void _camera_autosearch_clicked(GtkWidget *button, dt_iop_module_t *self)
@@ -3893,7 +3893,7 @@ static void _camera_autosearch_clicked(GtkWidget *button, dt_iop_module_t *self)
   }
 
   // dt_gui_menu_popup unrefs the menu
-  dt_gui_menu_popup(menu, button, GDK_GRAVITY_SOUTH_EAST, GDK_GRAVITY_NORTH_EAST);
+  dt_gui_menu_popup(GTK_WIDGET(menu), button, GDK_GRAVITY_SOUTH_EAST, GDK_GRAVITY_NORTH_EAST);
 }
 
 /* -- end camera -- */
@@ -4187,7 +4187,7 @@ static void _lens_menusearch_clicked(GtkWidget *button, dt_iop_module_t *self)
   lf_free(lenslist);
 
   // dt_gui_menu_popup unrefs the menu
-  dt_gui_menu_popup(menu, button, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
+  dt_gui_menu_popup(GTK_WIDGET(menu), button, GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
 }
 
 static void _lens_autosearch_clicked(GtkWidget *button, dt_iop_module_t *self)
@@ -4212,7 +4212,7 @@ static void _lens_autosearch_clicked(GtkWidget *button, dt_iop_module_t *self)
   lf_free(lenslist);
 
   // dt_gui_menu_popup unrefs the menu
-  dt_gui_menu_popup(menu, button, GDK_GRAVITY_SOUTH_EAST, GDK_GRAVITY_NORTH_EAST);
+  dt_gui_menu_popup(GTK_WIDGET(menu), button, GDK_GRAVITY_SOUTH_EAST, GDK_GRAVITY_NORTH_EAST);
 }
 
 /* -- end lens -- */

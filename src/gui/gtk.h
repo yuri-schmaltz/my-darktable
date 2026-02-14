@@ -197,9 +197,17 @@ static inline GdkPixbuf *dt_gdk_pixbuf_new_from_file_at_size(const char *filenam
   return gdk_pixbuf_new_from_file_at_size(filename, width * darktable.gui->ppd, height * darktable.gui->ppd, error);
 }
 
-// call class function to add or remove CSS classes (need to be set on top of this file as first function is used in this file)
-void dt_gui_add_class(GtkWidget *widget, const gchar *class_name);
-void dt_gui_remove_class(GtkWidget *widget, const gchar *class_name);
+static inline void dt_gui_add_class(GtkWidget *widget, const char *class_name)
+{
+  GtkStyleContext *context = gtk_widget_get_style_context(widget);
+  gtk_style_context_add_class(context, class_name);
+}
+
+static inline void dt_gui_remove_class(GtkWidget *widget, const char *class_name)
+{
+  GtkStyleContext *context = gtk_widget_get_style_context(widget);
+  gtk_style_context_remove_class(context, class_name);
+}
 
 void dt_open_url(const char *url);
 int dt_gui_theme_init(dt_gui_gtk_t *gui);
@@ -495,6 +503,13 @@ void dt_gui_container_foreach(void *container, void (*callback)(GtkWidget *, gpo
 // remove all of the children we've added to the container.  Any which
 // no longer have any references will be destroyed.
 void dt_gui_container_remove_children(void *container);
+void dt_gui_container_remove(void *container, void *child);
+void dt_gui_set_child(GtkWidget *container, GtkWidget *child);
+void dt_gui_container_foreach(void *_container, void (*callback)(GtkWidget *, gpointer), gpointer data);
+GtkWidget *dt_gui_container_nth_child(void *_container, int n);
+void dt_gui_widget_destroy(void *_widget);
+GtkWidget *dt_gui_event_box_new();
+GtkWidget *(dt_gui_box_add)(const char *file, const int line, const char *function, GtkBox *box, gpointer list[]);
 
 // delete all of the children we've added to the container.  Use this
 // function only if you are SURE there are no other references to any
@@ -502,32 +517,27 @@ void dt_gui_container_remove_children(void *container);
 // instead; it's a bit slower but safer).
 void dt_gui_container_destroy_children(void *container);
 
-#ifdef DT_GTK4
 void dt_gui_menu_popup(GtkWidget *menu,
                        GtkWidget *button,
                        GdkGravity widget_anchor,
                        GdkGravity menu_anchor);
-#else
-void dt_gui_menu_popup(GtkMenu *menu,
-                       GtkWidget *button,
-                       GdkGravity widget_anchor,
-                       GdkGravity menu_anchor);
-#endif
 
 #ifdef DT_GTK4
 GtkWidget *dt_gui_menu_new();
 GtkWidget *dt_gui_menu_item_new(const char *label, GCallback callback, gpointer user_data);
 GtkWidget *dt_gui_separator_menu_item_new();
 void dt_gui_menu_shell_append(GtkWidget *menu, GtkWidget *item);
+void dt_gui_menu_item_set_submenu(GtkWidget *item, GtkWidget *menu);
 #else
 #define dt_gui_menu_new() gtk_menu_new()
 #define dt_gui_menu_item_new(label, callback, user_data) ({ \
-  GtkWidget *mi = gtk_menu_item_new_with_label(label); \
-  if(callback) g_signal_connect(G_OBJECT(mi), "activate", callback, user_data); \
-  mi; \
+  GtkWidget *_mi_internal = gtk_menu_item_new_with_label(label); \
+  if(callback) g_signal_connect_data(G_OBJECT(_mi_internal), "activate", G_CALLBACK(callback), user_data, NULL, 0); \
+  _mi_internal; \
 })
 #define dt_gui_separator_menu_item_new() gtk_separator_menu_item_new()
 #define dt_gui_menu_shell_append(menu, item) gtk_menu_shell_append(GTK_MENU_SHELL(menu), GTK_WIDGET(item))
+#define dt_gui_menu_item_set_submenu(item, menu) gtk_menu_item_set_submenu(GTK_MENU_ITEM(item), menu)
 #endif
 
 void dt_gui_draw_rounded_rectangle(cairo_t *cr,
@@ -573,10 +583,15 @@ GtkGestureSingle *(dt_gui_connect_click)(GtkWidget *widget,
                                          GCallback pressed,
                                          GCallback released,
                                          gpointer data);
+#ifdef DT_GTK4
 #define dt_gui_connect_click(widget, pressed, released, data) ( \
   ASSERT_FUNC_TYPE(pressed, void(*)(GtkGestureSingle *, int, double, double, __typeof__(data))), \
   ASSERT_FUNC_TYPE(released, void(*)(GtkGestureSingle *, int, double, double, __typeof__(data))), \
   dt_gui_connect_click(GTK_WIDGET(widget), G_CALLBACK(pressed), G_CALLBACK(released), (data)))
+#else
+#define dt_gui_connect_click(widget, pressed, released, data) \
+  dt_gui_connect_click(GTK_WIDGET(widget), G_CALLBACK(pressed), G_CALLBACK(released), (data))
+#endif
 #define dt_gui_connect_click_all(widget, pressed, released, data) \
   gtk_gesture_single_set_button(dt_gui_connect_click(widget, pressed, released, data), 0)
 
@@ -597,11 +612,34 @@ GtkEventController *(dt_gui_connect_key)(GtkWidget *widget,
                                          GCallback pressed,
                                          GCallback released,
                                          gpointer data);
+#ifdef DT_GTK4
 #define dt_gui_connect_motion(widget, motion, enter, leave, data) ( \
   ASSERT_FUNC_TYPE(motion, void(*)(GtkEventControllerMotion *, double, double, __typeof__(data))), \
   ASSERT_FUNC_TYPE(enter, void(*)(GtkEventControllerMotion *, double, double, __typeof__(data))), \
   ASSERT_FUNC_TYPE(leave, void(*)(GtkEventControllerMotion *, __typeof__(data))), \
   dt_gui_connect_motion(GTK_WIDGET(widget), G_CALLBACK(motion), G_CALLBACK(enter), G_CALLBACK(leave), (data)))
+#else
+#define dt_gui_connect_motion(widget, motion, enter, leave, data) \
+  dt_gui_connect_motion(GTK_WIDGET(widget), G_CALLBACK(motion), G_CALLBACK(enter), G_CALLBACK(leave), (data))
+#endif
+#ifdef DT_GTK4
+#define dt_gui_connect_scroll(widget, scroll, data) ( \
+  ASSERT_FUNC_TYPE(scroll, gboolean(*)(GtkEventControllerScroll *, double, double, __typeof__(data))), \
+  dt_gui_connect_scroll(GTK_WIDGET(widget), G_CALLBACK(scroll), (data)))
+#else
+#define dt_gui_connect_scroll(widget, scroll, data) \
+  dt_gui_connect_scroll(GTK_WIDGET(widget), G_CALLBACK(scroll), (data))
+#endif
+
+#ifdef DT_GTK4
+#define dt_gui_connect_key(widget, pressed, released, data) ( \
+  ASSERT_FUNC_TYPE(pressed, gboolean(*)(GtkEventControllerKey *, guint, guint, GdkModifierType, __typeof__(data))), \
+  ASSERT_FUNC_TYPE(released, void(*)(GtkEventControllerKey *, guint, guint, GdkModifierType, __typeof__(data))), \
+  dt_gui_connect_key(GTK_WIDGET(widget), G_CALLBACK(pressed), G_CALLBACK(released), (data)))
+#else
+#define dt_gui_connect_key(widget, pressed, released, data) \
+  dt_gui_connect_key(GTK_WIDGET(widget), G_CALLBACK(pressed), G_CALLBACK(released), (data))
+#endif
 
 // GTK4 gtk_event_controller_get_current_event_state(GTK_EVENT_CONTROLLER(controller));
 #define dt_modifier_eq(controller, mask)\
@@ -617,27 +655,27 @@ void dt_gui_cursor_clear_busy();
 // (i.e. the current function will do a lot of work before returning)
 void dt_gui_process_events();
 
+
+G_END_DECLS
+
 #ifdef __cplusplus
-extern "C++"
-{
-template<typename... Widgets>
-#ifdef DT_GTK4
-  (gtk_box_append(GTK_BOX(box), GTK_WIDGET(w)), ...);
-#else
-  (gtk_container_add(GTK_CONTAINER(box), GTK_WIDGET(w)), ...);
-#endif
-  return GTK_WIDGET(box);
+template<typename... Args>
+static inline GtkWidget* _dt_gui_box_add_cpp(const char* file, int line, const char* func, GtkBox* box, Args... args) {
+  gpointer list[] = { args..., (gpointer)-1 };
+  return (dt_gui_box_add)(file, line, func, box, list);
 }
-}
-#else
-GtkWidget *(dt_gui_box_add)(const char *file, const int line, const char *function, GtkBox *box, gpointer list[]);
-GtkWidget *dt_gui_event_box_new();
-void dt_gui_set_child(GtkWidget *container, GtkWidget *child);
-void dt_gui_connect_drag_dest(GtkWidget *widget, GCallback motion_cb, GCallback drop_cb, GCallback leave_cb, gpointer user_data);
-#define dt_gui_box_add(box, ...) dt_gui_box_add(__FILE__, __LINE__, __FUNCTION__, GTK_BOX(box), (gpointer[]){ __VA_ARGS__ __VA_OPT__(,) (gpointer)-1 })
 #endif
-#define dt_gui_hbox(...) dt_gui_box_add(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0) __VA_OPT__(,) __VA_ARGS__)
-#define dt_gui_vbox(...) dt_gui_box_add(gtk_box_new(GTK_ORIENTATION_VERTICAL, 0) __VA_OPT__(,) __VA_ARGS__)
+
+G_BEGIN_DECLS
+
+#ifdef __cplusplus
+#define dt_gui_box_add(box, ...) _dt_gui_box_add_cpp(__FILE__, __LINE__, __FUNCTION__, GTK_BOX(box) __VA_OPT__(,) __VA_ARGS__)
+#else
+#define dt_gui_box_add(box, ...) (dt_gui_box_add)(__FILE__, __LINE__, __FUNCTION__, GTK_BOX(box), (gpointer[]){ __VA_ARGS__ __VA_OPT__(,) (gpointer)-1 })
+#endif
+
+#define dt_gui_hbox(...) dt_gui_box_add(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0), __VA_ARGS__)
+#define dt_gui_vbox(...) dt_gui_box_add(gtk_box_new(GTK_ORIENTATION_VERTICAL, 0), __VA_ARGS__)
 #define dt_gui_dialog_add(dialog, ...) dt_gui_box_add(gtk_dialog_get_content_area(GTK_DIALOG(dialog)), __VA_ARGS__)
 #define dt_gui_expand(widget) dt_gui_expand(GTK_WIDGET(widget))
 #define dt_gui_align_right(widget) dt_gui_align_right(GTK_WIDGET(widget))
@@ -653,26 +691,17 @@ static inline GtkWidget *(dt_gui_align_right)(GtkWidget *widget)
   gtk_widget_set_halign(widget, GTK_ALIGN_END);
   return dt_gui_expand(widget);
 }
-static inline void dt_gui_add_class(GtkWidget *widget, const char *class_name)
-{
-  GtkStyleContext *context = gtk_widget_get_style_context(widget);
-  gtk_style_context_add_class(context, class_name);
-}
-
-static inline void dt_gui_remove_class(GtkWidget *widget, const char *class_name)
-{
-  GtkStyleContext *context = gtk_widget_get_style_context(widget);
-  gtk_style_context_remove_class(context, class_name);
-}
 
 #ifdef DT_GTK4
 void dt_gui_gtk_widget_show_all(GtkWidget *widget);
 #define gtk_widget_show_all(widget) dt_gui_gtk_widget_show_all(GTK_WIDGET(widget))
+#else
+#define dt_gui_gtk_widget_show_all(widget) gtk_widget_show_all(GTK_WIDGET(widget))
 #endif
 
-#ifdef DT_GTK4
 static inline void dt_gui_box_pack_start(GtkBox *box, GtkWidget *widget, gboolean expand, gboolean fill, guint padding)
 {
+#ifdef DT_GTK4
   if(expand)
   {
     if(gtk_orientable_get_orientation(GTK_ORIENTABLE(box)) == GTK_ORIENTATION_HORIZONTAL)
@@ -693,10 +722,14 @@ static inline void dt_gui_box_pack_start(GtkBox *box, GtkWidget *widget, gboolea
     gtk_widget_set_margin_bottom(widget, padding);
   }
   gtk_box_append(box, widget);
+#else
+  (gtk_box_pack_start)(box, widget, expand, fill, padding);
+#endif
 }
 
 static inline void dt_gui_box_pack_end(GtkBox *box, GtkWidget *widget, gboolean expand, gboolean fill, guint padding)
 {
+#ifdef DT_GTK4
   if(expand)
   {
     if(gtk_orientable_get_orientation(GTK_ORIENTABLE(box)) == GTK_ORIENTATION_HORIZONTAL)
@@ -717,21 +750,22 @@ static inline void dt_gui_box_pack_end(GtkBox *box, GtkWidget *widget, gboolean 
     gtk_widget_set_margin_bottom(widget, padding);
   }
   gtk_box_prepend(box, widget);
-}
 #else
-#define dt_gui_box_pack_start(box, widget, expand, fill, padding) \
-  dt_gui_box_pack_start(GTK_BOX(box), GTK_WIDGET(widget), expand, fill, padding)
-#define dt_gui_box_pack_end(box, widget, expand, fill, padding) \
-  dt_gui_box_pack_end(GTK_BOX(box), GTK_WIDGET(widget), expand, fill, padding)
+  (gtk_box_pack_end)(box, widget, expand, fill, padding);
+#endif
+}
+
+#undef gtk_box_pack_start
 #define gtk_box_pack_start(box, widget, expand, fill, padding) \
   dt_gui_box_pack_start(GTK_BOX(box), GTK_WIDGET(widget), expand, fill, padding)
+#undef gtk_box_pack_end
 #define gtk_box_pack_end(box, widget, expand, fill, padding) \
   dt_gui_box_pack_end(GTK_BOX(box), GTK_WIDGET(widget), expand, fill, padding)
+
 #define gtk_container_add(container, widget) \
   dt_gui_set_child(GTK_WIDGET(container), GTK_WIDGET(widget))
 #define gtk_container_remove(container, widget) \
   dt_gui_container_remove(GTK_WIDGET(container), GTK_WIDGET(widget))
-#endif
 
 static inline GtkWidget *dt_gui_scroll_wrap(GtkWidget *widget)
 {
@@ -769,6 +803,7 @@ dt_gui_session_type_t dt_gui_get_session_type(void);
 #undef G_CALLBACK
 static inline GCallback G_CALLBACK(void *f) { return (GCallback)f; } // as a macro it gets expanded before reaching here
 #define DISABLINGPREFIXG_CALLBACK
+#define DISABLINGPREFIXNULL
 #define BOOLSIGNAL(s, signal) || !strcmp(s, #signal)
 #undef _Static_assert
 #undef  g_signal_connect

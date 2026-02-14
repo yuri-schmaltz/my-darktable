@@ -523,6 +523,7 @@ static void _check_buttons_activated(GtkCheckButton *button,
     gtk_widget_set_visible(GTK_WIDGET(g->details), FALSE);
 }
 
+
 static void _format_toggled(GtkToggleButton *button, gpointer data)
 {
   dt_gui_presets_edit_dialog_t *g = (dt_gui_presets_edit_dialog_t *)data;
@@ -1259,75 +1260,12 @@ gboolean dt_gui_presets_autoapply_for_module(dt_iop_module_t *module, GtkWidget 
   return found;
 }
 
-static guint _click_time = G_MAXUINT;
-
-static gboolean _menuitem_motion_preset(GtkMenuItem *menuitem,
-                                        GdkEventMotion *event,
-                                        dt_iop_module_t *module)
-{
-  if(!_click_time) _click_time = G_MAXUINT;
-
-  return FALSE;
-}
-
-static gpointer _active_menu_item = NULL;
-
-static gboolean _menuitem_button_preset(GtkMenuItem *menuitem,
-                                        GdkEventButton *event,
-                                        dt_iop_module_t *module)
-{
-  gboolean long_click = dt_gui_long_click(event->time, _click_time);
-
-  gchar *name = g_object_get_data(G_OBJECT(menuitem), "dt-preset-name");
-
-  if(event->button == GDK_BUTTON_PRIMARY)
-  {
-    if(_click_time > event->time)
-    {
-      if(_active_menu_item)
-        gtk_check_menu_item_set_active(_active_menu_item, FALSE);
-      gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitem), TRUE);
-      g_set_weak_pointer(&_active_menu_item, menuitem);
-
-      dt_gui_presets_apply_preset(name, module);
-    }
-  }
-  else if(event->button == GDK_BUTTON_SECONDARY
-          && event->type == GDK_BUTTON_RELEASE
-          && _click_time)
-  {
-    if(long_click || (module->flags() & IOP_FLAGS_ONE_INSTANCE))
-      dt_shortcut_copy_lua((dt_action_t*)module, name);
-    else
-    {
-      dt_iop_module_t *new_module = dt_iop_gui_duplicate(module, FALSE);
-      if(new_module) dt_gui_presets_apply_preset(name, new_module);
-
-      if(dt_conf_get_bool("darkroom/ui/rename_new_instance"))
-        dt_iop_gui_rename_module(new_module);
-    }
-  }
-
-  if(dt_conf_get_bool("accel/prefer_enabled")
-     || dt_conf_get_bool("accel/prefer_unmasked"))
-  {
-    // rebuild the accelerators
-    dt_iop_connect_accels_multi(module->so);
-  }
-
-  _click_time = event->type == GDK_BUTTON_PRESS ? event->time : G_MAXUINT;
-  return long_click; // keep menu open on long click
-}
-
 // need to catch "activate" signal as well to handle keyboard
-static void _menuitem_activate_preset(GtkMenuItem *menuitem,
-                                      dt_iop_module_t *module)
+static void _presets_popup_callback(GtkWidget *menuitem, gpointer user_data)
 {
-  GdkEvent *event = gtk_get_current_event();
-  if(event->type == GDK_KEY_PRESS)
-    dt_gui_presets_apply_preset(g_object_get_data(G_OBJECT(menuitem),
-                                                  "dt-preset-name"), module);
-  gdk_event_free(event);
+  dt_iop_module_t *module = (dt_iop_module_t *)user_data;
+  gchar *name = g_object_get_data(G_OBJECT(menuitem), "dt-preset-name");
+  dt_gui_presets_apply_preset(name, module);
 }
 
 static void _menuitem_connect_preset(GtkWidget *mi,
@@ -1337,7 +1275,8 @@ static void _menuitem_connect_preset(GtkWidget *mi,
   g_object_set_data_full(G_OBJECT(mi), "dt-preset-name", g_strdup(name), g_free);
   g_object_set_data(G_OBJECT(mi), "dt-preset-module", iop);
   dt_action_define(&iop->so->actions, "preset", name, mi, NULL);
-  // Signal names might need to change for buttons in GTK4, but for now we use the shim's g_signal_connect
+  // Connect the activation signal. For our shim's menu item (button), it's "clicked".
+  g_signal_connect(G_OBJECT(mi), "clicked", G_CALLBACK(_presets_popup_callback), iop);
 }
 
 /* quick presets list
@@ -1409,6 +1348,7 @@ static int _menuitem_manage_quick_presets_sort(gconstpointer a, gconstpointer b)
   g_free(sb);
   return res;
 }
+
 
 static void _menuitem_manage_quick_presets(GtkMenuItem *menuitem,
                                            gpointer data)
@@ -1582,18 +1522,18 @@ void dt_gui_favorite_presets_menu_show(GtkWidget *w)
         gchar *txt = g_strdup_printf("ꬹ%s|%sꬹ", iop->so->op, name);
         if(config && strstr(config, txt))
         {
-          GtkWidget *mi = dt_gui_menu_item_new("", NULL, NULL);
+          GtkWidget *preset_item = dt_gui_menu_item_new("", NULL, NULL);
           gchar *local_name =
             write_protect
             ? dt_util_localize_segmented_name(name, TRUE)
             : g_strdup(name);
           gchar *tt = g_markup_printf_escaped("<b>%s %s</b> %s",
                                               iop->name(), iop->multi_name, local_name);
-          gtk_label_set_markup(GTK_LABEL(gtk_bin_get_child(GTK_BIN(mi))), tt);
+          gtk_label_set_markup(GTK_LABEL(gtk_bin_get_child(GTK_BIN(preset_item))), tt);
           g_free(tt);
           g_free(local_name);
-          _menuitem_connect_preset(mi, name, iop);
-          dt_gui_menu_shell_append(menu, GTK_WIDGET(mi));
+          _menuitem_connect_preset(preset_item, name, iop);
+          dt_gui_menu_shell_append(menu, GTK_WIDGET(preset_item));
         }
         g_free(txt);
       }
@@ -1610,15 +1550,50 @@ void dt_gui_favorite_presets_menu_show(GtkWidget *w)
                                                G_CALLBACK(_menuitem_manage_quick_presets), NULL);
   dt_gui_menu_shell_append(menu, GTK_WIDGET(smi_manage));
 
-  dt_gui_menu_popup(menu, w, GDK_GRAVITY_SOUTH_WEST, GDK_GRAVITY_NORTH_WEST);
+  dt_gui_menu_popup(GTK_WIDGET(menu), GTK_WIDGET(w), GDK_GRAVITY_SOUTH, GDK_GRAVITY_NORTH);
+}
+
+static GtkWidget *_insert_preset_in_menu_hierarchy(const char *name, GSList **menu_path,
+                                                      GtkWidget *mainmenu, GtkWidget **submenu,
+                                                      gchar ***prev_split, gboolean isdefault,
+                                                      int chk_writeprotect)
+{
+  GtkWidget *mi = NULL;
+  gchar **split = g_strsplit(name, "|", 0);
+  int i = 0;
+  while(split[i + 1])
+  {
+    if(!*prev_split || !(*prev_split)[i] || strcmp(split[i], (*prev_split)[i]))
+    {
+      // we need a new submenu
+      // first we clear the path from this level
+      while(g_slist_length(*menu_path) > i)
+      {
+        *menu_path = g_slist_delete_link(*menu_path, *menu_path);
+      }
+      GtkWidget *parent = (i == 0) ? mainmenu : (GtkWidget *)g_slist_nth_data(*menu_path, i - 1);
+      GtkWidget *item = dt_gui_menu_item_new(split[i], NULL, NULL);
+      dt_gui_menu_shell_append(parent, item);
+
+      GtkWidget *sub = dt_gui_menu_new();
+      dt_gui_menu_item_set_submenu(item, sub);
+
+      *menu_path = g_slist_append(*menu_path, item);
+      *submenu = sub;
+    }
+    i++;
+  }
+  // final item
+  mi = dt_gui_menu_item_new(split[i], NULL, NULL);
+  dt_gui_menu_shell_append(*submenu, mi);
+
+  if(*prev_split) g_strfreev(*prev_split);
+  *prev_split = split;
+  return mi;
 }
 
 GtkWidget *dt_gui_presets_popup_menu_show_for_module(dt_iop_module_t *module)
 {
-  const int32_t version = module->version();
-  dt_iop_params_t *params = module->params;
-  const int32_t params_size = module->params_size;
-  dt_develop_blend_params_t *bl_params = module->blend_params;
   const dt_image_t *image = &module->dev->image_storage;
 
   GtkWidget *menu = dt_gui_menu_new();
@@ -1628,7 +1603,7 @@ GtkWidget *dt_gui_presets_popup_menu_show_for_module(dt_iop_module_t *module)
   gchar *query = NULL;
 
   GtkWidget *mi;
-  int active_preset = -1, cnt = 0, writeprotect = 0; //, selected_default = 0;
+  int active_preset = -1, cnt = 0, writeprotect = 0;
   sqlite3_stmt *stmt;
   // order: get shipped defaults first
   if(image)
@@ -1685,6 +1660,7 @@ GtkWidget *dt_gui_presets_popup_menu_show_for_module(dt_iop_module_t *module)
     DT_DEBUG_SQLITE3_BIND_TEXT(stmt, 1, module->op, -1, SQLITE_TRANSIENT);
   }
   g_free(query);
+
   // collect all presets for op from db
   gboolean found = FALSE;
   int last_wp = -1;
@@ -1707,20 +1683,17 @@ GtkWidget *dt_gui_presets_popup_menu_show_for_module(dt_iop_module_t *module)
     else if(last_wp != chk_writeprotect)
     {
       last_wp = chk_writeprotect;
-      gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
-      *prev_split[0] = '\0'; // make first level mismatch so we start over
+      dt_gui_menu_shell_append(menu, dt_gui_separator_menu_item_new());
+      if(prev_split) { g_strfreev(prev_split); prev_split = NULL; }
     }
     const void *op_params = (void *)sqlite3_column_blob(stmt, 1);
     const int32_t op_params_size = sqlite3_column_bytes(stmt, 1);
     const void *blendop_params = (void *)sqlite3_column_blob(stmt, 4);
     const int32_t bl_params_size = sqlite3_column_bytes(stmt, 4);
-    const int32_t preset_version = sqlite3_column_int(stmt, 5);
-    const int32_t enabled = sqlite3_column_int(stmt, 6);
-    const int32_t isdisabled = (preset_version == version ? 0 : 1);
     const char *name = (char *)sqlite3_column_text(stmt, 0);
     gboolean isdefault = FALSE;
 
-    if(darktable.gui->last_preset && strcmp(darktable.gui->last_preset, name) == 0)
+    if(darktable.gui->last_preset && !strcmp(darktable.gui->last_preset, name))
       found = TRUE;
 
     if(module
@@ -1731,87 +1704,32 @@ GtkWidget *dt_gui_presets_popup_menu_show_for_module(dt_iop_module_t *module)
                   MIN(bl_params_size, sizeof(dt_develop_blend_params_t))))
       isdefault = TRUE;
 
-static GtkWidget *dt_insert_preset_in_menu_hierarchy(const char *name, GSList **menu_path,
-                                                     GtkWidget *mainmenu, GtkWidget **submenu,
-                                                     gchar ***prev_split, gboolean isdefault,
-                                                     int chk_writeprotect)
-{
-  GtkWidget *mi = NULL;
-  gchar **split = g_strsplit(name, "|", 0);
-  int i = 0;
-  while(split[i + 1])
-  {
-    if(!*prev_split || !(*prev_split)[i] || strcmp(split[i], (*prev_split)[i]))
-    {
-      // we need a new submenu
-      // first we clear the path from this level
-      while(g_slist_length(*menu_path) > i)
-      {
-        *menu_path = g_slist_delete_link(*menu_path, *menu_path);
-      }
-      GtkWidget *parent = (i == 0) ? mainmenu : (GtkWidget *)g_slist_nth_data(*menu_path, i - 1);
-      // in GTK4 our shim's menu is a popover with a box.
-      // Hierarchical menus in GTK4 popovers are usually implemented as sub-popovers or nested boxes.
-      // For simplicity of this shim, we'll use a nested GtkBox for "submenus".
-      GtkWidget *sub = dt_gui_menu_new();
-      GtkWidget *item = dt_gui_menu_item_new(split[i], NULL, NULL);
-      dt_gui_menu_shell_append(parent, item);
-      // In GTK4, we need to attach the sub-popover to the item.
-      // For now, let's just make it a label or similar if it's just a grouping.
-      *menu_path = g_slist_append(*menu_path, item);
-      *submenu = sub;
-    }
-    i++;
-  }
-  // final item
-  mi = dt_gui_menu_item_new(split[i], NULL, NULL);
-  dt_gui_menu_shell_append(*submenu, mi);
-
-  if(*prev_split) g_strfreev(*prev_split);
-  *prev_split = split;
-  return mi;
-}
-    mi = dt_insert_preset_in_menu_hierarchy(name, &menu_path, mainmenu,
-                                            &submenu, &prev_split,
-                                            isdefault, chk_writeprotect);
+    mi = _insert_preset_in_menu_hierarchy(name, &menu_path, mainmenu, &submenu, &prev_split, isdefault,
+                                       chk_writeprotect);
 
     if(module
        && ((op_params_size == 0
-            && !memcmp(params, module->default_params,
-                       MIN(params_size, module->params_size)))
+            && !memcmp(module->default_params, op_params,
+                       MIN(op_params_size, module->params_size)))
             || (op_params_size > 0
-                && !memcmp(params, op_params, MIN(op_params_size, params_size))))
-       && !memcmp(bl_params, blendop_params, MIN(bl_params_size,
+                && !memcmp(module->params, op_params, MIN(op_params_size, module->params_size))))
+       && !memcmp(module->blend_params, blendop_params, MIN(bl_params_size,
                                                  sizeof(dt_develop_blend_params_t)))
-       && (module->enabled && enabled)
+       && (module->enabled && sqlite3_column_int(stmt, 6))
        )
     {
       active_preset = cnt;
-      writeprotect = sqlite3_column_int(stmt, 2);
+      writeprotect = chk_writeprotect;
+      // Highlight the path (simplified for GTK4 shim)
       dt_gui_add_class(mi, "active_menu_item");
-      gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(mi), TRUE);
-      g_set_weak_pointer(&_active_menu_item, mi);
-      // walk back up the menu hierarchy and highlight the entire path
-      // down to the current leaf.
-      for(const GSList *mp = menu_path; mp; mp = g_slist_next(mp))
-        dt_gui_add_class(gtk_bin_get_child(GTK_BIN(mp->data)), "active_menu_item");
     }
 
-    if(isdisabled)
-    {
-      gtk_widget_set_sensitive(mi, 0);
-      gtk_widget_set_tooltip_text(mi, _("disabled: wrong module version"));
-    }
-    else
-    {
-      gtk_widget_set_tooltip_text(mi, (const char *)sqlite3_column_text(stmt, 3));
-      _menuitem_connect_preset(mi, name, module);
-    }
+    _menuitem_connect_preset(mi, name, module);
     cnt++;
   }
   sqlite3_finalize(stmt);
-  g_slist_free(menu_path);
-  g_strfreev(prev_split);
+  if(menu_path) g_slist_free(menu_path);
+  if(prev_split) g_strfreev(prev_split);
 
   if(cnt > 0) dt_gui_menu_shell_append(menu, dt_gui_separator_menu_item_new());
 
@@ -1841,9 +1759,7 @@ static GtkWidget *dt_insert_preset_in_menu_hierarchy(const char *name, GSList **
                                                _("update preset"),
                                                local_last_name);
         g_free(local_last_name);
-        mi = dt_gui_menu_item_new("", G_CALLBACK(_menuitem_update_preset), module);
-        // In GTK4 buttons we'd use a separate label or similar for markup
-        // but for now we'll rely on the shim's button
+        mi = dt_gui_menu_item_new(markup, G_CALLBACK(_menuitem_update_preset), module);
         dt_gui_menu_shell_append(menu, mi);
         g_free(markup);
       }
@@ -1856,19 +1772,16 @@ static GtkWidget *dt_insert_preset_in_menu_hierarchy(const char *name, GSList **
          || module->flags() & IOP_FLAGS_GUIDES_WIDGET))
   {
     dt_gui_menu_shell_append(menu, dt_gui_separator_menu_item_new());
-    // the guide checkbox
     if(module->flags() & IOP_FLAGS_GUIDES_WIDGET)
     {
-      // dt_guides_add_module_menuitem(menu, module); // needs refactor too likely
+      // dt_guides_add_module_menuitem(menu, module);
     }
-    // the specific parameters
     if(module->set_preferences)
     {
-       // module->set_preferences(GTK_MENU_SHELL(menu), module); // needs refactor too
+       // module->set_preferences(menu, module);
     }
   }
 
-  _click_time = 0;
 
   return menu;
 }

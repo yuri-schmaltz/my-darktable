@@ -2112,7 +2112,7 @@ static void _primaries_popupmenu_callback(GtkWidget *button, dt_iop_module_t *se
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), unmodified_item);
 
   gtk_widget_show_all(menu);
-  dt_gui_menu_popup(GTK_MENU(menu), button, GDK_GRAVITY_SOUTH_WEST, GDK_GRAVITY_NORTH_WEST);
+  dt_gui_menu_popup(GTK_WIDGET(menu), button, GDK_GRAVITY_SOUTH_WEST, GDK_GRAVITY_NORTH_WEST);
 }
 
 static void _set_post_curve_primaries_from_pre_callback(GtkWidget *widget, dt_iop_module_t *self)

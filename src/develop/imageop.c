@@ -1067,7 +1067,7 @@ static gboolean _gui_multiinstance_callback(GtkButton *button,
   g_signal_connect(G_OBJECT(menu), "deactivate",
                    G_CALLBACK(_header_menu_deactivate_callback), module);
 
-  dt_gui_menu_popup(GTK_MENU(menu), GTK_WIDGET(button),
+  dt_gui_menu_popup(GTK_WIDGET(menu), GTK_WIDGET(button),
                     GDK_GRAVITY_SOUTH_EAST, GDK_GRAVITY_NORTH_EAST);
 
   // make sure the button is deactivated now that the menu is opened
@@ -2348,12 +2348,12 @@ static gboolean _presets_popup_callback(GtkButton *button,
   const gboolean disabled = !module->default_enabled && module->hide_enable_button;
   if(disabled) return FALSE;
 
-  GtkMenu *menu = dt_gui_presets_popup_menu_show_for_module(module);
+  GtkMenu *menu = GTK_MENU(dt_gui_presets_popup_menu_show_for_module(module));
 
   g_signal_connect(G_OBJECT(menu), "deactivate",
                    G_CALLBACK(_header_menu_deactivate_callback), module);
 
-  dt_gui_menu_popup(menu,
+  dt_gui_menu_popup(GTK_WIDGET(menu),
                     GTK_WIDGET(button), GDK_GRAVITY_SOUTH_EAST, GDK_GRAVITY_NORTH_EAST);
 
   return TRUE;
